@@ -3,6 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
 Project("{002A2DE9-8BB6-484D-9802-7E4AD4084715}") = "hooking", "hooking.visualdproj", "{F263E089-800D-4C8C-9728-73914F6486B5}"
 EndProject
+Project("{002A2DE9-8BB6-484D-9802-7E4AD4084715}") = "DLLInjectorUtil", "DLLInjectorUtil.visualdproj", "{7A30AE86-306C-411E-8E4E-561665D27990}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F263E089-800D-4C8C-9728-73914F6486B5} = {F263E089-800D-4C8C-9728-73914F6486B5}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -13,6 +18,10 @@ Global
 		{F263E089-800D-4C8C-9728-73914F6486B5}.Debug|Win32.Build.0 = Debug|Win32
 		{F263E089-800D-4C8C-9728-73914F6486B5}.Release|Win32.ActiveCfg = Release|Win32
 		{F263E089-800D-4C8C-9728-73914F6486B5}.Release|Win32.Build.0 = Release|Win32
+		{7A30AE86-306C-411E-8E4E-561665D27990}.Debug|Win32.ActiveCfg = Debug|Win32
+		{7A30AE86-306C-411E-8E4E-561665D27990}.Debug|Win32.Build.0 = Debug|Win32
+		{7A30AE86-306C-411E-8E4E-561665D27990}.Release|Win32.ActiveCfg = Release|Win32
+		{7A30AE86-306C-411E-8E4E-561665D27990}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,9 +1,9 @@
 <DProject>
- <ProjectGuid>{F263E089-800D-4C8C-9728-73914F6486B5}</ProjectGuid>
+ <ProjectGuid>{7A30AE86-306C-411E-8E4E-561665D27990}</ProjectGuid>
  <Config name="Debug" platform="Win32">
   <obj>0</obj>
   <link>0</link>
-  <lib>1</lib>
+  <lib>0</lib>
   <subsystem>0</subsystem>
   <multiobj>0</multiobj>
   <singleFileCompilation>0</singleFileCompilation>
@@ -86,7 +86,7 @@
   <libpaths />
   <deffile />
   <resfile />
-  <exefile>$(OutDir)\$(ProjectName).lib</exefile>
+  <exefile>$(OutDir)\$(ProjectName).exe</exefile>
   <additionalOptions />
   <preBuildCommand />
   <postBuildCommand />
@@ -95,7 +95,7 @@
  <Config name="Release" platform="Win32">
   <obj>0</obj>
   <link>0</link>
-  <lib>1</lib>
+  <lib>0</lib>
   <subsystem>0</subsystem>
   <multiobj>0</multiobj>
   <singleFileCompilation>0</singleFileCompilation>
@@ -178,17 +178,15 @@
   <libpaths />
   <deffile />
   <resfile />
-  <exefile>$(OutDir)\$(ProjectName).lib</exefile>
+  <exefile>$(OutDir)\$(ProjectName).exe</exefile>
   <additionalOptions />
   <preBuildCommand />
   <postBuildCommand />
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
- <Folder name="hooking">
-  <Folder name="hooking">
-   <Folder name="windows">
-    <File path="hooking\windows\dllinjector.d" />
-   </Folder>
+ <Folder name="DLLInjectorUtil">
+  <Folder name="utils">
+   <File path="utils\dllinjector_main.d" />
   </Folder>
  </Folder>
 </DProject>
