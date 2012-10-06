@@ -13,6 +13,11 @@ Project("{002A2DE9-8BB6-484D-9802-7E4AD4084715}") = "RegistryRedirectorDLL", "Re
 		{F263E089-800D-4C8C-9728-73914F6486B5} = {F263E089-800D-4C8C-9728-73914F6486B5}
 	EndProjectSection
 EndProject
+Project("{002A2DE9-8BB6-484D-9802-7E4AD4084715}") = "TLSFixerLib", "TLSFixerLib.visualdproj", "{D5E98716-B571-4FD6-A5B0-8CB397C26FB8}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F263E089-800D-4C8C-9728-73914F6486B5} = {F263E089-800D-4C8C-9728-73914F6486B5}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -31,6 +36,10 @@ Global
 		{682DB397-39CC-48D2-9403-091085FFCDF8}.Debug|Win32.Build.0 = Debug|Win32
 		{682DB397-39CC-48D2-9403-091085FFCDF8}.Release|Win32.ActiveCfg = Release|Win32
 		{682DB397-39CC-48D2-9403-091085FFCDF8}.Release|Win32.Build.0 = Release|Win32
+		{D5E98716-B571-4FD6-A5B0-8CB397C26FB8}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D5E98716-B571-4FD6-A5B0-8CB397C26FB8}.Debug|Win32.Build.0 = Debug|Win32
+		{D5E98716-B571-4FD6-A5B0-8CB397C26FB8}.Release|Win32.ActiveCfg = Release|Win32
+		{D5E98716-B571-4FD6-A5B0-8CB397C26FB8}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
