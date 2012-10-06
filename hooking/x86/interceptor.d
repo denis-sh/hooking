@@ -41,23 +41,98 @@ void insertCall(alias f, size_t address, string originCode)()
 	enforce(ptr[0 .. n] == originCode,
 		xformat("%(%X %) instead of %(%X %)", ptr[0 .. n], cast(ubyte[]) originCode));
 
-	DWORD oldProtect = makeWriteable(ptr, n);
-	*ptr = 0xE9; // JMP rel32
-	*cast(const(void)**) (ptr+1) = cast(const(void*)) &helper - (cast(size_t) ptr + 5);
-	static if(n > 5) foreach(i; 5 .. n)
-		*(ptr + i) = 0x90; // NOP
-	enforce(VirtualProtect(ptr, n, oldProtect, &oldProtect));
-	enforce(FlushInstructionCache(GetCurrentProcess(), ptr, n));
+	insertJump(ptr, n, cast(const(void*)) &helper);
 
 
 	ptr = cast(ubyte*) &helper + 10 + n;
 	enforce(*(ptr - 1) == 0xE9); // JMP rel32
 	enforce(*cast(size_t*) ptr == address + n);
 	
-	oldProtect = makeWriteable(ptr, 4);
+	DWORD oldProtect = makeWriteable(ptr, 4);
 	*cast(size_t*) ptr -= cast(size_t) ptr + 4;
 	enforce(VirtualProtect(ptr, 4, oldProtect, &oldProtect));
 	enforce(FlushInstructionCache(GetCurrentProcess(), ptr, 4));
+}
+
+import std.traits;
+
+void naked2() nothrow {
+	enum argc = 2;
+	asm {
+		naked;
+		push EBP;
+		mov EBP, ESP;
+		push dword ptr [EBP+4+4*2];
+		push dword ptr [EBP+4+4*1];
+		push dword ptr 0x0040997B;
+		//call myTest;
+		pop EBP;
+		ret 4 * argc;
+		db 0x55,0x8B,0xEC,0x90,0x90;
+		mov EDX, 0x0040998D;
+		jmp EDX;
+	}
+}
+
+// FIXME: hijacked function can jump to its start so we need to unhijack it first.
+void hijackFunction(T: F*, F)(void* originAddress, string originCode, T func) if(is(F == function))
+/*if(is(F == function) && is(ParameterTypeTuple!F Args) &&
+is(ReturnType!(Args[0]) == ReturnType!F) && is(ParameterTypeTuple!(Args[0]) == Args[1 .. $]))*/
+in { assert(originCode.length >= 5); }
+body {
+	//naked2();
+	alias ParameterTypeTuple!F HijackedArgs;
+	alias HijackedArgs[1 .. $] Args;
+	static assert(HijackedArgs.length >= 1);
+	static assert(is(ReturnType!(HijackedArgs[0]) == ReturnType!F));
+	static assert(is(ParameterTypeTuple!(HijackedArgs[0]) == Args));
+
+	ubyte* optr = cast(ubyte*) originAddress;
+	immutable n = originCode.length;
+	enforce(optr[0 .. n] == originCode,
+		xformat("%(%X %) instead of %(%X %)", optr[0 .. n], cast(ubyte[]) originCode));
+
+	ubyte* mptr = cast(ubyte*) enforce
+		(VirtualAllocEx(GetCurrentProcess(), null, 1024, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+	// Original code prefix
+	const moptr = mptr;
+	writeAsm(mptr, originCode);
+	writeRel32(mptr, 0xE9, originAddress + n);
+
+	// Our code
+	insertJump(optr, n, mptr);
+
+	writeAsm(mptr, x"55 89E5"); // push ebp; mov ebp, esp;
+	foreach_reverse(i; 0 .. Args.length)
+		writeAsms(mptr, x"FF 75", cast(ubyte) (8 + i * 4)); // push dword ptr [ebp+0x##] 
+	writeAsms(mptr, x"68", moptr); // push imm32
+	writeRel32(mptr, 0xE8, cast(void*) func); // call imm32
+	writeAsms(mptr, x"5D C2", cast(ushort) (4 * Args.length)); // pop ebp; ret imm16;
+}
+
+version(unittest) {
+	int originalTestCalled = 0;
+	extern(Windows) int originalTest(int a, int b) {
+		asm { nop; nop; }
+		assert(a == 0x11);
+		assert(b == 0x22);
+		++originalTestCalled;
+		return 0x33;
+	}
+
+	extern(Windows) int myTest(typeof(&originalTest) origin, int a, int b) {
+		assert(a == 0x44);
+		assert(b == 0x55);
+		return origin(b / 5, a / 2) * 2;
+	}
+}
+
+unittest {
+	assert(originalTest(0x11, 0x22) == 0x33 && originalTestCalled == 1);
+	hijackFunction(cast(void*) &originalTest,
+		x"55 8BEC 90 90" /*push ebp; mov ebp, esp; nop; nop;*/, // FIXME write originalTest is asm?
+		&myTest);
+	assert(originalTest(0x44, 0x55) == 0x66 && originalTestCalled == 2);
 }
 
 private:
@@ -77,4 +152,33 @@ DWORD makeWriteable(void* ptr, size_t size) {
 	enforce(VirtualProtect(ptr, size, mbi.Protect, &dwOld));
 	assert(!IsBadWritePtr(ptr, size));
 	return dwOld;
+}
+
+void insertJump(ubyte* ptr, size_t n, const(void)* target)
+in { assert(n >= 5); }
+body {
+	DWORD oldProtect = makeWriteable(ptr, n);
+	*ptr = 0xE9; // JMP rel32
+	*cast(const(void)**) (ptr+1) = target - (cast(size_t) ptr + 5);
+	foreach(i; 5 .. n)
+		*(ptr + i) = 0x90; // NOP
+	enforce(VirtualProtect(ptr, n, oldProtect, &oldProtect));
+	enforce(FlushInstructionCache(GetCurrentProcess(), ptr, n));
+}
+
+void writeAsm(T)(ref ubyte* ptr, in T[] tarr...) {
+	auto barr = cast(const(ubyte)[]) tarr;
+	ptr[0 .. barr.length] = barr;
+	ptr += barr.length;
+}
+
+void writeAsms(A...)(ref ubyte* ptr, A args) {
+	foreach(arg; args)
+		writeAsm(ptr, arg);
+}
+
+void writeRel32(ref ubyte* ptr, ubyte op, void* target) {
+	*ptr = op;
+	*cast(const(void)**) (ptr+1) = target - (cast(size_t) ptr + 5);
+	ptr += 5;
 }
