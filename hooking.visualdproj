@@ -189,6 +189,9 @@
    <Folder name="windows">
     <File path="hooking\windows\dllinjector.d" />
    </Folder>
+   <Folder name="x86">
+    <File path="hooking\x86\interceptor.d" />
+   </Folder>
   </Folder>
  </Folder>
 </DProject>
