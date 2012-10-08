@@ -39,7 +39,7 @@ void insertCall(alias f, size_t address, string originCode)()
 
 	ubyte* ptr = cast(ubyte*) address;
 	enforce(ptr[0 .. n] == originCode,
-		xformat("%(%X %) instead of %(%X %)", ptr[0 .. n], cast(ubyte[]) originCode));
+		xformat("Unexpected bytes at 0x%X: %(%X %) instead of %(%X %)", ptr, ptr[0 .. n], cast(ubyte[]) originCode));
 
 	insertJump(ptr, n, cast(const(void*)) &helper);
 
