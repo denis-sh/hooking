@@ -75,7 +75,7 @@ static:
 
 		HMODULE hnd = GetModuleHandleA( "NTDLL" );
 		assert( hnd, "cannot get module handle for ntdll" );
-		ubyte* fn = cast(ubyte*) GetProcAddress( hnd, "LdrInitializeThunk" );
+		void* fn = GetProcAddress( hnd, "LdrInitializeThunk" );
 		assert( fn, "cannot find LdrInitializeThunk in ntdll" );
 
 		bool loadFunc(alias func)() {
@@ -115,62 +115,51 @@ static:
 
 private:
 	// find a code sequence and return the address after the sequence
-	void* findCodeSequence( void* adr, int len, ref ubyte[] pattern ) nothrow
+	inout(void)* findCodeSequence(inout(void)* startAddress, in size_t len, in string pattern) nothrow
 	{
-		if( !adr )
+		if(!startAddress)
 			return null;
 
-		ubyte* code = cast(ubyte*) adr;
-		for( int p = 0; p < len; p++ )
-		{
-			if( code[ p .. p + pattern.length ] == pattern[ 0 .. $ ] )
-			{
-				ubyte* padr = code + p + pattern.length;
-				return padr;
-			}
-		}
+		auto code = cast(inout(ubyte)*) startAddress;
+		foreach(p; 0 .. len)
+			if(code[p .. p + pattern.length] == pattern)
+				return code + p + pattern.length;
 		return null;
 	}
 
 	// find a code sequence and return the (relative) address that follows
-	void* findCodeReference( void* adr, int len, ref ubyte[] pattern, bool relative ) nothrow
+	inout(void)* findCodeReference(inout(void)* startAddress, in size_t len, in string pattern, in bool relative) nothrow
 	{
-		if( !adr )
-			return null;
-
-		ubyte* padr = cast(ubyte*) findCodeSequence( adr, len, pattern );
-		if( padr )
-		{
-			if( relative )
-				return padr + 4 + *cast(int*) padr;
-			return *cast(void**) padr;
-		}
+		if(auto p = cast(inout(ubyte)*) findCodeSequence(startAddress, len, pattern))
+			return relative ? (p + 4 + *cast(int*) p) :
+				(*cast(inout(void)**) p);
 		return null;
 	}
 
-	// crawl through ntdll to find function _LdrpAllocateTls@0 and references
-	//  to _LdrpNumberOfTlsEntries, _NtdllBaseTag and _LdrpTlsList
-	// LdrInitializeThunk
-	// -> _LdrpInitialize@12
-	// -> _LdrpInitializeThread@4
-	// -> _LdrpAllocateTls@0
-	// -> je chunk
-	//     _LdrpNumberOfTlsEntries - number of entries in TlsList
-	//     _NtdllBaseTag           - tag used for RtlAllocateHeap
-	//     _LdrpTlsList            - root of the double linked list with TlsList entries
-	__gshared {
-		ubyte[] jmp_LdrpInitialize = [ 0x33, 0xED, 0xE9 ]; // xor ebp,ebp; jmp _LdrpInitialize
-		ubyte[] jmp__LdrpInitialize = [ 0x5D, 0xE9 ]; // pop ebp; jmp __LdrpInitialize
-		ubyte[] jmp__LdrpInitialize_xp64 = [ 0x5D, 0x90, 0x90, 0x90, 0x90, 0x90 ]; // pop ebp; nop; nop; nop; nop; nop;
-		ubyte[] call_LdrpInitializeThread = [ 0xFF, 0x75, 0x08, 0xE8 ]; // push [ebp+8]; call _LdrpInitializeThread
-		ubyte[] call_LdrpAllocateTls = [ 0x00, 0x00, 0xE8 ]; // jne 0xc3; call _LdrpAllocateTls
-		ubyte[] call_LdrpAllocateTls_svr03 = [ 0x65, 0xfc, 0x00, 0xE8 ]; // and [ebp+fc], 0; call _LdrpAllocateTls
-		ubyte[] jne_LdrpAllocateTls = [ 0x0f, 0x85 ]; // jne body_LdrpAllocateTls
-		ubyte[] mov_LdrpNumberOfTlsEntries = [ 0x8B, 0x0D ]; // mov ecx, _LdrpNumberOfTlsEntries
-		ubyte[] mov_NtdllBaseTag = [ 0x51, 0x8B, 0x0D ]; // push ecx; mov ecx, _NtdllBaseTag
-		ubyte[] mov_NtdllBaseTag_srv03 = [ 0x50, 0xA1 ]; // push eax; mov eax, _NtdllBaseTag
-		ubyte[] mov_LdrpTlsList = [ 0x8B, 0x3D ]; // mov edi, _LdrpTlsList
-	}
+	/*
+	crawl through ntdll to find function _LdrpAllocateTls@0 and references
+	 to _LdrpNumberOfTlsEntries, _NtdllBaseTag and _LdrpTlsList
+	LdrInitializeThunk
+	-> _LdrpInitialize@12
+	-> _LdrpInitializeThread@4
+	-> _LdrpAllocateTls@0
+	-> je chunk
+	    _LdrpNumberOfTlsEntries - number of entries in TlsList
+	    _NtdllBaseTag           - tag used for RtlAllocateHeap
+	    _LdrpTlsList            - root of the double linked list with TlsList entries
+	*/
+	enum
+		jmp_LdrpInitialize = x"33ED E9", // xor EBP, EBP; jmp _LdrpInitialize
+		jmp__LdrpInitialize = x"5D E9", // pop EBP; jmp __LdrpInitialize
+		jmp__LdrpInitialize_xp64 = x"5D 90 90 90 90 90", // pop EBP; nop; nop; nop; nop; nop;
+		call_LdrpInitializeThread = x"FF7508 E8", // push [EBP+8]; call _LdrpInitializeThread
+		call_LdrpAllocateTls = x"0000 E8", // jne 0xc3; call _LdrpAllocateTls
+		call_LdrpAllocateTls_svr03 = x"65 fc 00 E8", // and [EBP+0xfc], 0; call _LdrpAllocateTls
+		jne_LdrpAllocateTls = x"0F85", // jne body_LdrpAllocateTls
+		mov_LdrpNumberOfTlsEntries = x"8B0D", // mov ECX, _LdrpNumberOfTlsEntries
+		mov_NtdllBaseTag = x"51 8B0D", // push ECX; mov ECX, _NtdllBaseTag
+		mov_NtdllBaseTag_srv03 = x"50 A1", // push EAX; mov EAX, _NtdllBaseTag
+		mov_LdrpTlsList = x"8B3D"; // mov EDI, _LdrpTlsList
 }
 
 // WinAPI structs
