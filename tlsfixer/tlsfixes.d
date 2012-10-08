@@ -32,8 +32,8 @@ void fixLibraryLoading() {
 		return;
 
 	alias LONG NTSTATUS;
-	alias extern(Windows) NTSTATUS function(ULONG Flags, ULONG *State, ULONG *Cookie) LdrLockLoaderLockType;
-	alias extern(Windows) NTSTATUS function(ULONG Flags, ULONG Cookie) LdrUnlockLoaderLockType;
+	alias extern(Windows) NTSTATUS function(ULONG Flags, ULONG *State, ULONG *Cookie) nothrow LdrLockLoaderLockType;
+	alias extern(Windows) NTSTATUS function(ULONG Flags, ULONG Cookie) nothrow LdrUnlockLoaderLockType;
 
 	auto ntdll = GetModuleHandleA("ntdll");
 	auto LdrLockLoaderLock   = cast(LdrLockLoaderLockType  ) enforce(GetProcAddress(ntdll, "LdrLockLoaderLock"));
@@ -50,20 +50,35 @@ void fixLibraryLoading() {
 	// so LdrUnlockLoaderLock may not be called.
 	validateLoadedModules();
 
-	// push ESI; push EDI; push EBX; mov ESI, ESP;
-	insertCall!(nakedTlsFixer!beforeDllMainCalled, 0x7C901179, x"56  57  53  8BF4")();
+	// FIXME: get addresses dynamically for current ntdll.dll
+	// using `RtlFreeHeap` and `LdrShutdownThread` exported functions
+	
+	insertCall!(nakedTlsFixer!beforeDllMainCalled,
+		0x7C901179,
+		x"56  57  53  8BF4" // push ESI; push EDI; push EBX; mov ESI, ESP;
+	)();
 
-	// pop EBP; retn 10; nop;
-	insertCall!(nakedTlsFixer!afterDllMainCalled, 0x7C90118F, x"5D C2 10 00 90")();
+	insertCall!(nakedTlsFixer!afterDllMainCalled,
+		0x7C90118F,
+		x"5D  C2 1000  90" // pop EBP; retn 10; nop;
+	)();
 
-	// push 0xA0; RtlFreeHeap function
-	insertCall!(nakedOnRtlFreeHeapCalled, 0x7C90FF2D, x"68 A0 00 00 00")();
-	//insertCall!(nakedOnRtlFreeHeapCalled, 0x7C90FF3C, x"8B 7D 08 89 7D C8")();
+
+	insertCall!(nakedOnRtlFreeHeapCalled,
+		0x7C90FF2D,    // RtlFreeHeap function
+		x"68 A0000000" // push 0xA0;
+		/+ or:
+		0x7C90FF3C,          // in RtlFreeHeap function
+		x"8B7D 08   897D C8" // mov EDI, [EBP+0x8]; mov [EBP-0x38], EDI;
+		+/
+	)();
 
 	// Insert our hook in the memory freeing function (something like LdrpFreeTls in ReactOS)
 	// called by LdrShutdownThread just before function that calls RtlLeaveCriticalSection
-	// mov ESI, dword ptr DS:[EAX + 0x2C]; test ESI, ESI;
-	insertCall!(nakedOnLdrShutdownThread, 0x7C9139A8, x"8B 70 2C 85 F6")();
+	insertCall!(nakedOnLdrShutdownThread,
+		0x7C9139A8,      // The target of first from the last three calls in LdrShutdownThread before return
+		x"8B70 2C  85F6" // mov ESI, dword ptr DS:[EAX + 0x2C]; test ESI, ESI;
+	)();
 
 
 	libraryLoadingFixed = true;
