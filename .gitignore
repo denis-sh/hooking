@@ -3,3 +3,5 @@ Debug
 *.suo
 *.dll
 *.lib
+*.build
+*.cmd

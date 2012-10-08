@@ -1,14 +1,6 @@
 @echo off
-echo ----- Building DLLs -----
-set PATH=D:\D\dmd2head\windows\bin;%PATH%
-for /l %%i in (1,1,3) do (
-    echo 100%%i > tlsVarDesiredValue
-    dmd dllmain.d -J. -oftest-D-%%i.dll -L/IMPLIB:test-D-%%i.lib ..\..\def.def || echo Error && pause
-)
-del *.obj && del tlsVarDesiredValue
-
-
-
+echo ----- Building C DLLs -----
+cd tlsfixer\test-dlls
 call "%ProgramFiles%\Microsoft Visual Studio 9.0\VC\vcvarsall.bat" x86
 
 rem /O2 Creates fast code.
