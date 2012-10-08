@@ -153,8 +153,8 @@ private:
 		jmp__LdrpInitialize = x"5D E9", // pop EBP; jmp __LdrpInitialize
 		jmp__LdrpInitialize_xp64 = x"5D 90 90 90 90 90", // pop EBP; nop; nop; nop; nop; nop;
 		call_LdrpInitializeThread = x"FF7508 E8", // push [EBP+8]; call _LdrpInitializeThread
-		call_LdrpAllocateTls = x"0000 E8", // jne 0xc3; call _LdrpAllocateTls
-		call_LdrpAllocateTls_svr03 = x"65 fc 00 E8", // and [EBP+0xfc], 0; call _LdrpAllocateTls
+		call_LdrpAllocateTls = /*0F85 C300*/x"0000 E8", // jne $+0xC3; call _LdrpAllocateTls
+		call_LdrpAllocateTls_svr03 = /*80*/x"65 FC 00 E8", // and byte ptr [EBP-0x4], 0; call _LdrpAllocateTls
 		jne_LdrpAllocateTls = x"0F85", // jne body_LdrpAllocateTls
 		mov_LdrpNumberOfTlsEntries = x"8B0D", // mov ECX, _LdrpNumberOfTlsEntries
 		mov_NtdllBaseTag = x"51 8B0D", // push ECX; mov ECX, _NtdllBaseTag
