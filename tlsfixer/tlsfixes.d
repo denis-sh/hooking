@@ -76,7 +76,8 @@ void fixLibraryLoading() {
 	// Insert our hook in the memory freeing function (something like LdrpFreeTls in ReactOS)
 	// called by LdrShutdownThread just before function that calls RtlLeaveCriticalSection
 	insertCall!(nakedOnLdrShutdownThread,
-		0x7C9139A8,      // The target of first from the last three calls in LdrShutdownThread before return
+		0x7C91A7D8,      // The target of first from the last three calls in LdrShutdownThread before return
+		// On older ntdll.dll: 0x7C9139A8
 		x"8B70 2C  85F6" // mov ESI, dword ptr DS:[EAX + 0x2C]; test ESI, ESI;
 	)();
 
