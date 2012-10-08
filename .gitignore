@@ -1,3 +1,5 @@
 Release
 Debug
 *.suo
+*.dll
+*.lib
