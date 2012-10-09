@@ -52,7 +52,7 @@ int main(string[] args)
 	}
 
 	int exitCode;
-	if(auto e = collectException(exitCode = resumeWithDll(processInfo, file, dll, wait)))
+	if(auto e = collectException(exitCode = resumeWithDll(processInfo, dll, wait)))
 	{
 		stderr.writefln("DLL loading failure: %s", e.msg);
 		return ExitCodes.dllLoadingFailure; // FIXME or other failure?

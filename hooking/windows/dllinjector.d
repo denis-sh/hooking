@@ -27,9 +27,9 @@ body
 	return processInfo;
 }
 
-int resumeWithDll(PROCESS_INFORMATION processInfo, string file, string dllName, bool wait = true)
+int resumeWithDll(PROCESS_INFORMATION processInfo, string dllName, bool wait = true)
 {
-	size_t entryPoint = getEntryPoint(toUTF16z(file));
+	size_t entryPoint = getEntryPoint(processInfo.hProcess);
 
 
 	ubyte[5 + 2] originCode,
@@ -148,6 +148,39 @@ size_t allocateRemoteCodeAndData(HANDLE hProcess, string dllName, size_t jmpAddr
 
 // WinAPI helpers
 // --------------------------------------------------
+
+DWORD getEntryPoint(HANDLE hProcess)
+{
+	auto NtQueryInformationProcess = cast(NtQueryInformationProcess)
+		enforce(GetProcAddress(LoadLibraryA("ntdll"), "NtQueryInformationProcess"));
+
+	void*[6] /* PROCESS_BASIC_INFORMATION */ pbi;
+	ULONG returnLength;
+	NtQueryInformationProcess(hProcess, 0 /* PROCESSINFOCLASS.ProcessBasicInformation */, &pbi, pbi.sizeof, &returnLength);
+	assert(returnLength == pbi.sizeof);
+
+	const(void)* imageBase;
+	SIZE_T bytesRead;
+	enforce(ReadProcessMemory(hProcess,
+		pbi[1] /* PROCESS_BASIC_INFORMATION.PebBaseAddress */ + 8, // PEB.Reserved3[1] offset
+		&imageBase, imageBase.sizeof, &bytesRead));
+	enforce(bytesRead == imageBase.sizeof);
+
+	LONG e_lfanew;
+	enforce(ReadProcessMemory(hProcess,
+		imageBase + 60 /* IMAGE_DOS_HEADER.e_lfanew offset*/,
+		&e_lfanew, e_lfanew.sizeof, &bytesRead));
+	enforce(bytesRead == e_lfanew.sizeof);
+	const(void)* pNtHeaders = imageBase + e_lfanew;
+
+	const(void)* entryPoint;
+	enforce(ReadProcessMemory(hProcess,
+		pNtHeaders + 24 /* OptionalHeader offset */ + 16 /* AddressOfEntryPoint offset */,
+		&entryPoint, entryPoint.sizeof, &bytesRead));
+	enforce(bytesRead == entryPoint.sizeof);
+
+	return cast(DWORD) (imageBase + cast(size_t) entryPoint);
+}
 
 DWORD getEntryPoint(LPCWSTR file)
 {
@@ -288,4 +321,14 @@ extern(Windows) nothrow
 		HANDLE hProcess,
 		LPDWORD lpExitCode
 	);
+
+	alias LONG NTSTATUS;
+
+	alias NTSTATUS function(
+		HANDLE ProcessHandle,
+		int /* PROCESSINFOCLASS */ ProcessInformationClass,
+		PVOID ProcessInformation,
+		ULONG ProcessInformationLength,
+		PULONG ReturnLength
+	) NtQueryInformationProcess;
 }
