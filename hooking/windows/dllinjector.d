@@ -15,7 +15,7 @@ import std.exception;
 
 static assert(size_t.sizeof == 4);
 
-void launchWithDll(string file, string arguments, string dllName, bool wait = true)
+PROCESS_INFORMATION launchSuspended(string file, string arguments)
 in { assert(file); }
 body
 {
@@ -24,10 +24,14 @@ body
 	auto fileW = toUTF16z(file);
 	enforce(CreateProcessW(fileW, arguments ? toUTF16(arguments ~ '\0').dup.ptr : null,
 		null, null, TRUE, CREATE_SUSPENDED/* | CREATE_NEW_CONSOLE*/, null, null, &info, &processInfo));
+	return processInfo;
+}
 
-	size_t entryPoint = getEntryPoint(fileW, processInfo.hProcess);
+int resumeWithDll(PROCESS_INFORMATION processInfo, string file, string dllName, bool wait = true)
+{
+	size_t entryPoint = getEntryPoint(toUTF16z(file));
 
-	
+
 	ubyte[5 + 2] originCode,
 		newCode = cast(const(ubyte)[]) x"E9 00000000 EB FE"; // JMP rel32; JMP $-2;
 
@@ -82,15 +86,23 @@ body
 	enforce(SetThreadContext(processInfo.hThread, &context));
 	enforce(ResumeThread(processInfo.hThread) != -1);
 
+	DWORD exitCode = 0; // return 0 if wait == false
 	if(wait)
+	{
 		WaitForSingleObject(processInfo.hProcess, INFINITE);
+		enforce(GetExitCodeProcess(processInfo.hProcess, &exitCode));
+		// Note: If the process returned STILL_ACTIVE(259) we don't care
+	}
+
 	CloseHandle(processInfo.hProcess);
 	CloseHandle(processInfo.hThread);
+	return exitCode;
 }
 
 
 private:
 
+// TODO: throw on DLL loading failure
 size_t allocateRemoteCodeAndData(HANDLE hProcess, string dllName, size_t jmpAddress, out size_t executeStart)
 {
 	wstring strW = toUTF16(dllName);
@@ -137,7 +149,7 @@ size_t allocateRemoteCodeAndData(HANDLE hProcess, string dllName, size_t jmpAddr
 // WinAPI helpers
 // --------------------------------------------------
 
-DWORD getEntryPoint(LPCWSTR file, HANDLE hProcess)
+DWORD getEntryPoint(LPCWSTR file)
 {
 	void* pExe;
 	{
@@ -155,7 +167,7 @@ DWORD getEntryPoint(LPCWSTR file, HANDLE hProcess)
 	scope(exit) enforce(UnmapViewOfFile(pExe));
 
 	auto RtlImageNtHeader = cast(RtlImageNtHeaderType)
-		GetProcAddress(LoadLibraryA("ntdll"), "RtlImageNtHeader");
+		enforce(GetProcAddress(LoadLibraryA("ntdll"), "RtlImageNtHeader"));
 
 	const ntOptionalHeader = RtlImageNtHeader(pExe) + 24 /* OptionalHeader */;
 	return *cast(size_t*) (ntOptionalHeader + 28 /* ImageBase */) +
@@ -218,7 +230,7 @@ struct STARTUPINFOW
 	HANDLE  hStdError;
 }
 
-struct PROCESS_INFORMATION
+public struct PROCESS_INFORMATION
 {
 	HANDLE hProcess;
 	HANDLE hThread;
@@ -226,7 +238,7 @@ struct PROCESS_INFORMATION
 	DWORD dwThreadId;
 }
 
-extern(Windows)
+extern(Windows) nothrow
 {
 	extern BOOL CreateProcessW(
 		LPCWSTR lpApplicationName,
@@ -270,5 +282,10 @@ extern(Windows)
 		LPCVOID lpBuffer,
 		SIZE_T nSize,
 		SIZE_T *lpNumberOfBytesWritten
+	);
+
+	extern BOOL GetExitCodeProcess(
+		HANDLE hProcess,
+		LPDWORD lpExitCode
 	);
 }
