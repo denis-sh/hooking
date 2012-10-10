@@ -68,11 +68,10 @@ struct Process
 		enforce(oldProtection & 0xF0); // Expect some PAGE_EXECUTE_* constant
 
 		// Save origin code
-		enforce(ReadProcessMemory(info.hProcess, cast(void*) entryPoint, originCode.ptr, originCode.length, null));
+		readMemory(entryPoint, originCode);
 
 		// Let Windows initialize its stuff
-		enforce(WriteProcessMemory(info.hProcess, cast(void*) entryPoint, x"EB FE".ptr /* JMP $-2 */, 2, null));
-		enforce(FlushInstructionCache(info.hProcess, cast(void*) entryPoint, 2));
+		writeMemory(entryPoint, x"EB FE" /* JMP $-2 */, true);
 		executeUntil(info.hThread, entryPoint);
 
 		// Allocate and fill remote memory for code and data
@@ -80,8 +79,7 @@ struct Process
 		*cast(size_t*)(newCode.ptr + 1) = executeStart - (entryPoint + 5);
 
 		// Load our DLL
-		enforce(WriteProcessMemory(info.hProcess, cast(void*) entryPoint, newCode.ptr, newCode.length, null));
-		enforce(FlushInstructionCache(info.hProcess, cast(void*) entryPoint, newCode.length));
+		writeMemory(entryPoint, newCode, true);
 		executeUntil(info.hThread, entryPoint + newCode.length - 2);
 
 		// Free remote memory
@@ -105,9 +103,8 @@ struct Process
 		}
 
 		// Restore origin code
-		enforce(WriteProcessMemory(info.hProcess, cast(void*) entryPoint, originCode.ptr, originCode.length, null));
-		enforce(FlushInstructionCache(info.hProcess, cast(void*) entryPoint, originCode.length));
-		
+		writeMemory(entryPoint, originCode, true);
+
 		// Restore origin memory protection
 		enforce(changeMemoryProtection(entryPoint, originCode.length, oldProtection) == PAGE_EXECUTE_READWRITE);
 
