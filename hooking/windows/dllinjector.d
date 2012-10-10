@@ -12,6 +12,8 @@ import core.sys.windows.windows;
 import std.utf;
 import std.exception;
 
+import hooking.windows.thread;
+
 
 static assert(size_t.sizeof == 4);
 
@@ -34,6 +36,8 @@ struct Process
 		enforce(CreateProcessW(toUTF16z(file), arguments ? toUTF16(arguments ~ '\0').dup.ptr : null,
 			null, null, TRUE, creationFlags, null, null, &startupInfo, &info));
 	}
+
+	@property Thread primaryThread() { return Thread(info.hThread); }
 
 	/// Returns previous access protection of the first page in the specified region
 	DWORD changeMemoryProtection(RemoteAddress address, size_t size, DWORD newProtection)
@@ -72,7 +76,7 @@ struct Process
 
 		// Let Windows initialize its stuff
 		writeMemory(entryPoint, x"EB FE" /* JMP $-2 */, true);
-		executeUntil(info.hThread, entryPoint);
+		primaryThread.executeUntil(entryPoint);
 
 		// Allocate and fill remote memory for code and data
 		size_t executeStart, remotePtr = allocateRemoteCodeAndData(info.hProcess, dllName, entryPoint + 5, executeStart);
@@ -80,7 +84,7 @@ struct Process
 
 		// Load our DLL
 		writeMemory(entryPoint, newCode, true);
-		executeUntil(info.hThread, entryPoint + newCode.length - 2);
+		primaryThread.executeUntil(entryPoint + newCode.length - 2);
 
 		// Free remote memory
 		enforce(VirtualFreeEx(info.hProcess, cast(void*) remotePtr, 0, MEM_RELEASE));
@@ -237,22 +241,6 @@ DWORD getEntryPoint(LPCWSTR file)
 	const ntOptionalHeader = RtlImageNtHeader(pExe) + 24 /* OptionalHeader */;
 	return *cast(size_t*) (ntOptionalHeader + 28 /* ImageBase */) +
 		*cast(size_t*) (ntOptionalHeader + 16 /* AddressOfEntryPoint */);
-}
-
-void executeUntil(HANDLE thread, size_t address)
-{
-	enforce(ResumeThread(thread) != -1);
-	for(size_t i = 0; ;++i)
-	{
-		Sleep(20);
-		CONTEXT context;
-		context.ContextFlags = CONTEXT_CONTROL;
-		enforce(GetThreadContext(thread, &context));
-		if(context.Eip == address)
-			break;
-		enforce(i < 50);
-	}
-	enforce(SuspendThread(thread) != -1);
 }
 
 
