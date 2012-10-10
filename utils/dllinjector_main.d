@@ -14,7 +14,7 @@ import std.string: xformat;
 import std.range: empty;
 import std.stdio: stderr;
 
-import hooking.windows.dllinjector;
+import hooking.windows.process;
 
 enum ExitCodes { success, processNonZeroReturn, dllLoadingFailure, processLaunchingFailure, incorrectUsage }
 

@@ -190,7 +190,7 @@
     <File path="hooking\windows\kernel32.d" />
     <File path="hooking\windows\pe.d" />
     <File path="hooking\windows\thread.d" />
-    <File path="hooking\windows\dllinjector.d" />
+    <File path="hooking\windows\process.d" />
    </Folder>
    <Folder name="x86">
     <File path="hooking\x86\utils.d" />
