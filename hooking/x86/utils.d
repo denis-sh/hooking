@@ -25,6 +25,6 @@ inout(void)* findCodeSequence(inout(void)* startAddress, size_t len, string patt
 inout(void)* findCodeReference(inout(void)* startAddress, size_t len, string pattern, bool relative) nothrow
 {
 	if(auto p = findCodeSequence(startAddress, len, pattern))
-		return relative ? p + 4 + *cast(Signed!size_t*) p : *cast(inout(void)**) p;
+		return relative ? p + (void*).sizeof + *cast(Signed!size_t*) p : *cast(inout(void)**) p;
 	return null;
 }
