@@ -59,6 +59,26 @@ struct Process
 			enforce(FlushInstructionCache(info.hProcess, cast(LPVOID) baseAddress, buff.length));
 	}
 
+	void initializeWindowsStuff()
+	{
+		RemoteAddress entryPoint = getEntryPoint(info.hProcess);
+
+		enum loopCode = x"EB FE"; // JMP $-2
+
+		// Change memory protection (before reading because it can be PAGE_EXECUTE)
+		DWORD oldProtection = changeMemoryProtection(entryPoint, loopCode.length, PAGE_EXECUTE_READWRITE);
+		enforce(oldProtection & 0xF0); // Expect some PAGE_EXECUTE_* constant
+
+		ubyte[loopCode.length] originCode;
+		readMemory(entryPoint, originCode);         // Save origin code
+		writeMemory(entryPoint, loopCode, true);    // Write new loop code (and flush instruction cache)
+		mainThread.executeUntil(entryPoint);        // Let Windows initialize its stuff
+		writeMemory(entryPoint, originCode, true);  // Restore origin code
+
+		// Restore origin memory protection
+		enforce(changeMemoryProtection(entryPoint, loopCode.length, oldProtection) == PAGE_EXECUTE_READWRITE);
+	}
+
 	void resumeWithDll(string dllName)
 	{
 		RemoteAddress entryPoint = getEntryPoint(info.hProcess);
