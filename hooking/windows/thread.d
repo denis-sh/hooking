@@ -16,9 +16,13 @@ struct Thread
 {
 	private HANDLE handle;
 
+	void suspend() { enforce(SuspendThread(handle) != -1); }
+
+	void resume() { enforce(ResumeThread(handle) != -1); }
+
 	void executeUntil(size_t address)
 	{
-		enforce(ResumeThread(handle) != -1);
+		resume();
 		for(size_t i = 0; ;++i)
 		{
 			Sleep(20);
@@ -29,6 +33,6 @@ struct Thread
 				break;
 			enforce(i < 50);
 		}
-		enforce(SuspendThread(handle) != -1);
+		suspend();
 	}
 }
