@@ -113,7 +113,7 @@ struct PEFile {
 	}
 
 	@property imageNtHeaders() const nothrow {
-		// get LONG e_lfanew (offset = 60) as DWORD (Note: have to converto to DWORD)
+		// get LONG e_lfanew (offset = 60) as DWORD (Note: have to convert to DWORD)
 		immutable toNt = *cast(DWORD*) (base + 60);
 		return cast(const(IMAGE_NT_HEADERS)*) (base + toNt);
 	}
