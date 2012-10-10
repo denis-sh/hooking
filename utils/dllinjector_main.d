@@ -52,11 +52,15 @@ int main(string[] args)
 	}
 	scope(exit) process.closeHandles();
 
-	if(auto e = collectException(process.resumeWithDll(dll)))
+	process.initializeWindowsStuff();
+
+	if(auto e = collectException(process.loadDll(dll)))
 	{
 		stderr.writefln("DLL loading failure: %s", e.msg);
 		return ExitCodes.dllLoadingFailure; // FIXME or other failure?
 	}
+
+	process.primaryThread.resume();
 
 	if(wait)
 		if(int exitCode = process.waitForExit())

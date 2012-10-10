@@ -72,52 +72,48 @@ struct Process
 		ubyte[loopCode.length] originCode;
 		readMemory(entryPoint, originCode);         // Save origin code
 		writeMemory(entryPoint, loopCode, true);    // Write new loop code (and flush instruction cache)
-		mainThread.executeUntil(entryPoint);        // Let Windows initialize its stuff
+		primaryThread.executeUntil(entryPoint);        // Let Windows initialize its stuff
 		writeMemory(entryPoint, originCode, true);  // Restore origin code
 
 		// Restore origin memory protection
 		enforce(changeMemoryProtection(entryPoint, loopCode.length, oldProtection) == PAGE_EXECUTE_READWRITE);
 	}
 
-	void resumeWithDll(string dllName)
+	void loadDll(string dllName)
 	{
-		RemoteAddress entryPoint = getEntryPoint(info.hProcess);
+		// Suspend thread and get its EIP
+		primaryThread.suspend();
+		RemoteAddress address = primaryThread.getContext(CONTEXT_CONTROL).Eip;
 
-
-		ubyte[5 + 2] originCode,
-			newCode = cast(const(ubyte)[]) x"E9 00000000 EB FE"; // JMP rel32; JMP $-2;
+		ubyte[5 + 2] newCode = cast(const(ubyte)[]) x"E9 00000000 EB FE"; // JMP rel32; JMP $-2;
 
 		// Change memory protection (before reading because it can be PAGE_EXECUTE)
-		DWORD oldProtection = changeMemoryProtection(entryPoint, originCode.length, PAGE_EXECUTE_READWRITE);
+		DWORD oldProtection = changeMemoryProtection(address, newCode.length, PAGE_EXECUTE_READWRITE);
 		enforce(oldProtection & 0xF0); // Expect some PAGE_EXECUTE_* constant
 
-		// Save origin code
-		readMemory(entryPoint, originCode);
-
-		// Let Windows initialize its stuff
-		writeMemory(entryPoint, x"EB FE" /* JMP $-2 */, true);
-		primaryThread.executeUntil(entryPoint);
+		ubyte[newCode.length] originCode;
+		readMemory(address, originCode);         // Save origin code
 
 		// Allocate and fill remote memory for code and data
-		size_t executeStart, remotePtr = allocateRemoteCodeAndData(info.hProcess, dllName, entryPoint + 5, executeStart);
-		*cast(size_t*)(newCode.ptr + 1) = executeStart - (entryPoint + 5);
+		size_t executeStart, remotePtr = allocateRemoteCodeAndData(info.hProcess, dllName, address + 5, executeStart);
+		*cast(size_t*)(newCode.ptr + 1) = executeStart - (address + 5);
 
 		// Load our DLL
-		writeMemory(entryPoint, newCode, true);
-		primaryThread.executeUntil(entryPoint + newCode.length - 2);
+		writeMemory(address, newCode, true);
+		primaryThread.executeUntil(address + newCode.length - 2);
 
 		// Free remote memory
 		enforce(VirtualFreeEx(info.hProcess, cast(void*) remotePtr, 0, MEM_RELEASE));
 
 		// Restore origin code
-		writeMemory(entryPoint, originCode, true);
+		writeMemory(address, originCode, true);
 
 		// Restore origin memory protection
-		enforce(changeMemoryProtection(entryPoint, originCode.length, oldProtection) == PAGE_EXECUTE_READWRITE);
+		enforce(changeMemoryProtection(address, originCode.length, oldProtection) == PAGE_EXECUTE_READWRITE);
 
 		// Restore EIP and resume thread
-		mainThread.changeContext(CONTEXT_CONTROL, (ref context) { context.Eip = entryPoint; });
-		mainThread.resume();
+		primaryThread.changeContext(CONTEXT_CONTROL, (ref context) { context.Eip = address; });
+		primaryThread.resume();
 	}
 
 	int waitForExit()
