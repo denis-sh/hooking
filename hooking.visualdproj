@@ -187,6 +187,7 @@
  <Folder name="hooking">
   <Folder name="hooking">
    <Folder name="windows">
+    <File path="hooking\windows\kernel32.d" />
     <File path="hooking\windows\pe.d" />
     <File path="hooking\windows\thread.d" />
     <File path="hooking\windows\dllinjector.d" />
