@@ -15,88 +15,123 @@ import std.exception;
 
 static assert(size_t.sizeof == 4);
 
-PROCESS_INFORMATION launchSuspended(string file, string arguments)
-in { assert(file); }
-body
+alias size_t RemoteAddress;
+
+struct Process
 {
-	STARTUPINFOW info = { STARTUPINFOW.sizeof };
-	PROCESS_INFORMATION processInfo;
-	auto fileW = toUTF16z(file);
-	enforce(CreateProcessW(fileW, arguments ? toUTF16(arguments ~ '\0').dup.ptr : null,
-		null, null, TRUE, CREATE_SUSPENDED/* | CREATE_NEW_CONSOLE*/, null, null, &info, &processInfo));
-	return processInfo;
-}
+	private PROCESS_INFORMATION info;
 
-int resumeWithDll(PROCESS_INFORMATION processInfo, string dllName, bool wait = true)
-{
-	size_t entryPoint = getEntryPoint(processInfo.hProcess);
-
-
-	ubyte[5 + 2] originCode,
-		newCode = cast(const(ubyte)[]) x"E9 00000000 EB FE"; // JMP rel32; JMP $-2;
-
-	// Save old code and make memory writeable
-	enforce(ReadProcessMemory(processInfo.hProcess, cast(void*) entryPoint, originCode.ptr, originCode.length, null));
-	makeWriteable(processInfo.hProcess, cast(void*)entryPoint, originCode.length);
-
-	// Let Windows initialize its stuff
-	enforce(WriteProcessMemory(processInfo.hProcess, cast(void*) entryPoint, x"EB FE".ptr /* JMP $-2 */, 2, null));
-	enforce(FlushInstructionCache(processInfo.hProcess, cast(void*) entryPoint, 2));
-	executeUntil(processInfo.hThread, entryPoint);
-
-	// Allocate and fill remote memory for code and data
-	size_t executeStart, remotePtr = allocateRemoteCodeAndData(processInfo.hProcess, dllName, entryPoint + 5, executeStart);
-	*cast(size_t*)(newCode.ptr + 1) = executeStart - (entryPoint + 5);
-
-	// Load our DLL
-	enforce(WriteProcessMemory(processInfo.hProcess, cast(void*) entryPoint, newCode.ptr, newCode.length, null));
-	enforce(FlushInstructionCache(processInfo.hProcess, cast(void*) entryPoint, newCode.length));
-	executeUntil(processInfo.hThread, entryPoint + newCode.length - 2);
-
-	// Free remote memory
-	enforce(VirtualFreeEx(processInfo.hProcess, cast(void*) remotePtr, 0, MEM_RELEASE));
-
-	
-	auto hPsapi = LoadLibraryA("Psapi");
-	
-	auto EnumProcessModules = cast(EnumProcessModulesType) GetProcAddress(hPsapi, "EnumProcessModules");
-	
-	HMODULE[256] staticHmoduleBuff;
-	HMODULE[] modules = staticHmoduleBuff;
-	size_t needed;
-	enforce(EnumProcessModules(processInfo.hProcess, staticHmoduleBuff.ptr, staticHmoduleBuff.sizeof, &needed));
-	assert(needed % HMODULE.sizeof == 0);
-	if(needed > staticHmoduleBuff.sizeof)
+	this(string file, string arguments, bool launchSuspended, bool createNewConsole = false)
+	in { assert(file); }
+	body
 	{
-		modules = new HMODULE[needed / HMODULE.sizeof];
-		enforce(EnumProcessModules(processInfo.hProcess, modules.ptr, modules.length, &needed));
-		enforce(needed == modules.length * HMODULE.sizeof);
+		DWORD creationFlags = 0;
+		if(launchSuspended)
+			creationFlags |= CREATE_SUSPENDED;
+		if(createNewConsole)
+			creationFlags |= CREATE_NEW_CONSOLE;
+		STARTUPINFOW startupInfo = { STARTUPINFOW.sizeof };
+		enforce(CreateProcessW(toUTF16z(file), arguments ? toUTF16(arguments ~ '\0').dup.ptr : null,
+			null, null, TRUE, creationFlags, null, null, &startupInfo, &info));
 	}
 
-	// Restore origin code
-	enforce(WriteProcessMemory(processInfo.hProcess, cast(void*) entryPoint, originCode.ptr, originCode.length, null));
-	enforce(FlushInstructionCache(processInfo.hProcess, cast(void*) entryPoint, originCode.length));
-
-	// Restore EIP and resume thread
-	CONTEXT context;
-	context.ContextFlags = CONTEXT_CONTROL;
-	enforce(GetThreadContext(processInfo.hThread, &context));
-	context.Eip = entryPoint;
-	assert(context.ContextFlags == CONTEXT_CONTROL);
-	enforce(SetThreadContext(processInfo.hThread, &context));
-	enforce(ResumeThread(processInfo.hThread) != -1);
-
-	DWORD exitCode = 0; // return 0 if wait == false
-	if(wait)
+	/// Returns previous access protection of the first page in the specified region
+	DWORD changeMemoryProtection(RemoteAddress address, size_t size, DWORD newProtection)
 	{
-		WaitForSingleObject(processInfo.hProcess, INFINITE);
-		enforce(GetExitCodeProcess(processInfo.hProcess, &exitCode));
-		// Note: If the process returned STILL_ACTIVE(259) we don't care
+		DWORD oldProtection;
+		enforce(VirtualProtectEx(info.hProcess, cast(LPVOID) address, size, newProtection, &oldProtection));
+		return oldProtection;
 	}
 
-	CloseHandle(processInfo.hProcess);
-	CloseHandle(processInfo.hThread);
-	return exitCode;
+	void readMemory(RemoteAddress baseAddress, void[] buff)
+	{
+		enforce(ReadProcessMemory(info.hProcess, cast(LPCVOID) baseAddress, buff.ptr, buff.length, null));
+	}
+
+	void writeMemory(RemoteAddress baseAddress, in void[] buff, bool flushInstructionCache = false)
+	{
+		enforce(WriteProcessMemory(info.hProcess, cast(LPVOID) baseAddress, buff.ptr, buff.length, null));
+		if(flushInstructionCache)
+			enforce(FlushInstructionCache(info.hProcess, cast(LPVOID) baseAddress, buff.length));
+	}
+
+	int resumeWithDll(string dllName, bool wait = true)
+	{
+		RemoteAddress entryPoint = getEntryPoint(info.hProcess);
+
+
+		ubyte[5 + 2] originCode,
+			newCode = cast(const(ubyte)[]) x"E9 00000000 EB FE"; // JMP rel32; JMP $-2;
+
+		// Change memory protection (before reading because it can be PAGE_EXECUTE)
+		DWORD oldProtection = changeMemoryProtection(entryPoint, originCode.length, PAGE_EXECUTE_READWRITE);
+		enforce(oldProtection & 0xF0); // Expect some PAGE_EXECUTE_* constant
+
+		// Save origin code
+		enforce(ReadProcessMemory(info.hProcess, cast(void*) entryPoint, originCode.ptr, originCode.length, null));
+
+		// Let Windows initialize its stuff
+		enforce(WriteProcessMemory(info.hProcess, cast(void*) entryPoint, x"EB FE".ptr /* JMP $-2 */, 2, null));
+		enforce(FlushInstructionCache(info.hProcess, cast(void*) entryPoint, 2));
+		executeUntil(info.hThread, entryPoint);
+
+		// Allocate and fill remote memory for code and data
+		size_t executeStart, remotePtr = allocateRemoteCodeAndData(info.hProcess, dllName, entryPoint + 5, executeStart);
+		*cast(size_t*)(newCode.ptr + 1) = executeStart - (entryPoint + 5);
+
+		// Load our DLL
+		enforce(WriteProcessMemory(info.hProcess, cast(void*) entryPoint, newCode.ptr, newCode.length, null));
+		enforce(FlushInstructionCache(info.hProcess, cast(void*) entryPoint, newCode.length));
+		executeUntil(info.hThread, entryPoint + newCode.length - 2);
+
+		// Free remote memory
+		enforce(VirtualFreeEx(info.hProcess, cast(void*) remotePtr, 0, MEM_RELEASE));
+
+		
+		auto hPsapi = LoadLibraryA("Psapi");
+		
+		auto EnumProcessModules = cast(EnumProcessModulesType) GetProcAddress(hPsapi, "EnumProcessModules");
+		
+		HMODULE[256] staticHmoduleBuff;
+		HMODULE[] modules = staticHmoduleBuff;
+		size_t needed;
+		enforce(EnumProcessModules(info.hProcess, staticHmoduleBuff.ptr, staticHmoduleBuff.sizeof, &needed));
+		assert(needed % HMODULE.sizeof == 0);
+		if(needed > staticHmoduleBuff.sizeof)
+		{
+			modules = new HMODULE[needed / HMODULE.sizeof];
+			enforce(EnumProcessModules(info.hProcess, modules.ptr, modules.length, &needed));
+			enforce(needed == modules.length * HMODULE.sizeof);
+		}
+
+		// Restore origin code
+		enforce(WriteProcessMemory(info.hProcess, cast(void*) entryPoint, originCode.ptr, originCode.length, null));
+		enforce(FlushInstructionCache(info.hProcess, cast(void*) entryPoint, originCode.length));
+		
+		// Restore origin memory protection
+		enforce(changeMemoryProtection(entryPoint, originCode.length, oldProtection) == PAGE_EXECUTE_READWRITE);
+
+		// Restore EIP and resume thread
+		CONTEXT context;
+		context.ContextFlags = CONTEXT_CONTROL;
+		enforce(GetThreadContext(info.hThread, &context));
+		context.Eip = entryPoint;
+		assert(context.ContextFlags == CONTEXT_CONTROL);
+		enforce(SetThreadContext(info.hThread, &context));
+		enforce(ResumeThread(info.hThread) != -1);
+
+		DWORD exitCode = 0; // return 0 if wait == false
+		if(wait)
+		{
+			WaitForSingleObject(info.hProcess, INFINITE);
+			enforce(GetExitCodeProcess(info.hProcess, &exitCode));
+			// Note: If the process returned STILL_ACTIVE(259) we don't care
+		}
+
+		enforce(CloseHandle(info.hProcess));
+		enforce(CloseHandle(info.hThread));
+		return exitCode;
+	}
 }
 
 
@@ -205,20 +240,6 @@ DWORD getEntryPoint(LPCWSTR file)
 	const ntOptionalHeader = RtlImageNtHeader(pExe) + 24 /* OptionalHeader */;
 	return *cast(size_t*) (ntOptionalHeader + 28 /* ImageBase */) +
 		*cast(size_t*) (ntOptionalHeader + 16 /* AddressOfEntryPoint */);
-}
-
-DWORD makeWriteable(HANDLE hProcess, void* ptr, size_t size)
-{
-	//enforce(IsBadWritePtr(ptr, size), "Alreasy accessed changed by some program");
-
-	MEMORY_BASIC_INFORMATION mbi;
-	enforce(VirtualQueryEx(hProcess, ptr, &mbi, mbi.sizeof));
-	auto tt = mbi.Protect;
-	mbi.Protect &= ~(PAGE_READONLY|PAGE_EXECUTE_READ);
-	mbi.Protect |= PAGE_EXECUTE_READWRITE;
-	DWORD dwOld;
-	enforce(VirtualProtectEx(hProcess, ptr, size, mbi.Protect, &dwOld));
-	return dwOld;
 }
 
 void executeUntil(HANDLE thread, size_t address)
