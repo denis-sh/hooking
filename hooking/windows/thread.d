@@ -11,6 +11,8 @@ module hooking.windows.thread;
 import core.sys.windows.windows;
 import std.exception;
 
+import hooking.windows.kernel32;
+
 
 struct Thread
 {
@@ -63,5 +65,21 @@ struct Thread
 		CONTEXT context = getContext(getFlags);
 		del(context);
 		setContext(context);
+	}
+
+	@property DWORD suspendCount()
+	{
+		DWORD suspendCount = SuspendThread(handle); // FIXME enforce?
+		ResumeThread(handle);
+		return suspendCount;
+	}
+
+	@property bool onBaseProcessStartThunk()
+	{
+		CONTEXT context;
+		context.ContextFlags = CONTEXT_CONTROL;
+		enforce(GetThreadContext(handle, &context));
+		Kernel32.load();
+		return context.Eip == cast(DWORD) Kernel32.BaseProcessStartThunk;
 	}
 }
