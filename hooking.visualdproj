@@ -191,6 +191,7 @@
     <File path="hooking\windows\dllinjector.d" />
    </Folder>
    <Folder name="x86">
+    <File path="hooking\x86\utils.d" />
     <File path="hooking\x86\interceptor.d" />
    </Folder>
   </Folder>

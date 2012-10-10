@@ -13,6 +13,8 @@ module tlsfixer.ntdll;
 
 import core.sys.windows.windows;
 
+import hooking.x86.utils;
+
 
 extern(Windows) extern HANDLE GetProcessHeap() nothrow;
 
@@ -113,29 +115,6 @@ static:
 		return true;
 	}
 
-private:
-	// find a code sequence and return the address after the sequence
-	inout(void)* findCodeSequence(inout(void)* startAddress, in size_t len, in string pattern) nothrow
-	{
-		if(!startAddress)
-			return null;
-
-		auto code = cast(inout(ubyte)*) startAddress;
-		foreach(p; 0 .. len)
-			if(code[p .. p + pattern.length] == pattern)
-				return code + p + pattern.length;
-		return null;
-	}
-
-	// find a code sequence and return the (relative) address that follows
-	inout(void)* findCodeReference(inout(void)* startAddress, in size_t len, in string pattern, in bool relative) nothrow
-	{
-		if(auto p = cast(inout(ubyte)*) findCodeSequence(startAddress, len, pattern))
-			return relative ? (p + 4 + *cast(int*) p) :
-				(*cast(inout(void)**) p);
-		return null;
-	}
-
 	/*
 	crawl through ntdll to find function _LdrpAllocateTls@0 and references
 	 to _LdrpNumberOfTlsEntries, _NtdllBaseTag and _LdrpTlsList
@@ -148,7 +127,7 @@ private:
 	    _NtdllBaseTag           - tag used for RtlAllocateHeap
 	    _LdrpTlsList            - root of the double linked list with TlsList entries
 	*/
-	enum
+	private enum
 		jmp_LdrpInitialize = x"33ED E9", // xor EBP, EBP; jmp _LdrpInitialize
 		jmp__LdrpInitialize = x"5D E9", // pop EBP; jmp __LdrpInitialize
 		jmp__LdrpInitialize_xp64 = x"5D 90 90 90 90 90", // pop EBP; nop; nop; nop; nop; nop;
