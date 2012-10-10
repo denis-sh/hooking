@@ -44,4 +44,24 @@ struct Thread
 		foreach(i; 0 .. suspendCount)
 			suspend();
 	}
+
+	CONTEXT getContext(DWORD flags)
+	{
+		CONTEXT context;
+		context.ContextFlags = flags;
+		enforce(GetThreadContext(handle, &context));
+		return context;
+	}
+
+	void setContext(CONTEXT context)
+	{
+		enforce(SetThreadContext(handle, &context));
+	}
+
+	void changeContext(DWORD getFlags, scope void delegate(ref CONTEXT) del)
+	{
+		CONTEXT context = getContext(getFlags);
+		del(context);
+		setContext(context);
+	}
 }

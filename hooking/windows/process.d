@@ -116,13 +116,8 @@ struct Process
 		enforce(changeMemoryProtection(entryPoint, originCode.length, oldProtection) == PAGE_EXECUTE_READWRITE);
 
 		// Restore EIP and resume thread
-		CONTEXT context;
-		context.ContextFlags = CONTEXT_CONTROL;
-		enforce(GetThreadContext(info.hThread, &context));
-		context.Eip = entryPoint;
-		assert(context.ContextFlags == CONTEXT_CONTROL);
-		enforce(SetThreadContext(info.hThread, &context));
-		enforce(ResumeThread(info.hThread) != -1);
+		mainThread.changeContext(CONTEXT_CONTROL, (ref context) { context.Eip = entryPoint; });
+		mainThread.resume();
 	}
 
 	int waitForExit()
