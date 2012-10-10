@@ -50,19 +50,19 @@ int main(string[] args)
 		stderr.writefln("Process launching failure: %s", e.msg);
 		return ExitCodes.processLaunchingFailure;
 	}
+	scope(exit) process.closeHandles();
 
-	int exitCode;
-	if(auto e = collectException(exitCode = process.resumeWithDll(dll, wait)))
+	if(auto e = collectException(process.resumeWithDll(dll)))
 	{
 		stderr.writefln("DLL loading failure: %s", e.msg);
 		return ExitCodes.dllLoadingFailure; // FIXME or other failure?
 	}
-	assert(!(!wait && exitCode));
-	if(exitCode)
-	{
-		assert(wait);
-		stderr.writefln("Process returned error code %s", exitCode);
-		return ExitCodes.processNonZeroReturn;
-	}
+
+	if(wait)
+		if(int exitCode = process.waitForExit())
+		{
+			stderr.writefln("Process returned error code %s", exitCode);
+			return ExitCodes.processNonZeroReturn;
+		}
 	return ExitCodes.success;
 }

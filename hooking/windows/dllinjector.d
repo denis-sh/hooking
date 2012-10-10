@@ -59,7 +59,7 @@ struct Process
 			enforce(FlushInstructionCache(info.hProcess, cast(LPVOID) baseAddress, buff.length));
 	}
 
-	int resumeWithDll(string dllName, bool wait = true)
+	void resumeWithDll(string dllName)
 	{
 		RemoteAddress entryPoint = getEntryPoint(info.hProcess);
 
@@ -120,18 +120,21 @@ struct Process
 		assert(context.ContextFlags == CONTEXT_CONTROL);
 		enforce(SetThreadContext(info.hThread, &context));
 		enforce(ResumeThread(info.hThread) != -1);
+	}
 
-		DWORD exitCode = 0; // return 0 if wait == false
-		if(wait)
-		{
-			WaitForSingleObject(info.hProcess, INFINITE);
-			enforce(GetExitCodeProcess(info.hProcess, &exitCode));
-			// Note: If the process returned STILL_ACTIVE(259) we don't care
-		}
+	int waitForExit()
+	{
+		WaitForSingleObject(info.hProcess, INFINITE);
+		DWORD exitCode;
+		enforce(GetExitCodeProcess(info.hProcess, &exitCode));
+		// Note: If the process returned STILL_ACTIVE(259) we do not care
+		return exitCode;
+	}
 
+	void closeHandles()
+	{
 		enforce(CloseHandle(info.hProcess));
 		enforce(CloseHandle(info.hThread));
-		return exitCode;
 	}
 }
 
