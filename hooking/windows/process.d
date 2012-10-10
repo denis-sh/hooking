@@ -109,23 +109,6 @@ struct Process
 		// Free remote memory
 		enforce(VirtualFreeEx(info.hProcess, cast(void*) remotePtr, 0, MEM_RELEASE));
 
-		
-		auto hPsapi = LoadLibraryA("Psapi");
-		
-		auto EnumProcessModules = cast(EnumProcessModulesType) GetProcAddress(hPsapi, "EnumProcessModules");
-		
-		HMODULE[256] staticHmoduleBuff;
-		HMODULE[] modules = staticHmoduleBuff;
-		size_t needed;
-		enforce(EnumProcessModules(info.hProcess, staticHmoduleBuff.ptr, staticHmoduleBuff.sizeof, &needed));
-		assert(needed % HMODULE.sizeof == 0);
-		if(needed > staticHmoduleBuff.sizeof)
-		{
-			modules = new HMODULE[needed / HMODULE.sizeof];
-			enforce(EnumProcessModules(info.hProcess, modules.ptr, modules.length, &needed));
-			enforce(needed == modules.length * HMODULE.sizeof);
-		}
-
 		// Restore origin code
 		writeMemory(entryPoint, originCode, true);
 
@@ -320,13 +303,6 @@ extern(Windows) nothrow
 		CREATE_SUSPENDED    = 0x00000004,
 		CREATE_NEW_CONSOLE  = 0x00000010,
 	}
-
-	alias BOOL function(
-		HANDLE hProcess,
-		HMODULE *lphModule,
-		DWORD cb,
-		LPDWORD lpcbNeeded
-	) EnumProcessModulesType;
 
 	alias const(void)* function(in PVOID ModuleAddress) RtlImageNtHeaderType;
 
