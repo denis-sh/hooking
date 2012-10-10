@@ -20,9 +20,17 @@ struct Thread
 
 	void resume() { enforce(ResumeThread(handle) != -1); }
 
+
+	/** Waits for thread's EIP to be fixed on $(D address) (e.g. because of a `JMP $-2;` loop).
+	It will resume the thread if it is suspended and then increase suspended count with the same value.
+	*/
 	void executeUntil(size_t address)
 	{
-		resume();
+		DWORD suspendCount = ResumeThread(handle);
+		enforce(suspendCount != -1);
+		foreach(i; 1 .. suspendCount)
+			resume();
+
 		for(size_t i = 0; ;++i)
 		{
 			Sleep(20);
@@ -33,6 +41,7 @@ struct Thread
 				break;
 			enforce(i < 50);
 		}
-		suspend();
+		foreach(i; 0 .. suspendCount)
+			suspend();
 	}
 }
