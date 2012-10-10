@@ -92,6 +92,13 @@ struct Process
 	in { assert(info.hThread); }
 	body { return Thread(info.hThread); }
 
+	DWORD getMemoryProtection(RemoteAddress address)
+	{
+		MEMORY_BASIC_INFORMATION mbi;
+		enforce(VirtualQueryEx(info.hProcess, cast(LPVOID) address, &mbi, mbi.sizeof));
+		return mbi.Protect;
+	}
+
 	/// Returns previous access protection of the first page in the specified region
 	DWORD changeMemoryProtection(RemoteAddress address, size_t size, DWORD newProtection)
 	{
