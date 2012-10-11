@@ -384,4 +384,68 @@ extern(Windows) nothrow
 		ULONG ProcessInformationLength,
 		PULONG ReturnLength
 	) NtQueryInformationProcess;
+
+	struct UNICODE_STRING
+	{
+		USHORT Length;
+		USHORT MaximumLength;
+		PWSTR  Buffer;
+	}
+	
+	struct OBJECT_ATTRIBUTES
+	{
+		ULONG           Length;
+		HANDLE          RootDirectory;
+		UNICODE_STRING* ObjectName;
+		ULONG           Attributes;
+		PVOID           SecurityDescriptor;
+		PVOID           SecurityQualityOfService;
+	}
+
+	alias NTSTATUS function (
+		/*out*/ PHANDLE ProcessHandle,
+		ACCESS_MASK DesiredAccess,
+		POBJECT_ATTRIBUTES ObjectAttributes,
+		HANDLE InheritFromProcessHandle,
+		BOOLEAN InheritHandles,
+		/*opt*/ HANDLE SectionHandle,
+		/*opt*/ HANDLE DebugPort,
+		/*opt*/ HANDLE ExceptionPort
+	) ZwCreateProcess;
+
+	// https://groups.google.com/forum/?hl=ru&fromgroups=#!topic/comp.os.ms-windows.programmer.nt.kernel-mode/wyw5M6eYal8
+	alias NTSTATUS function (
+		/*out*/  PHANDLE ProcessHandle,
+		ACCESS_MASK DesiredAccess,
+		/*opt*/ OBJECT_ATTRIBUTES* ObjectAttributes,
+		HANDLE ParentProcess,
+		DWORD Flags,
+		/*opt*/ HANDLE SectionHandle,
+		/*opt*/ HANDLE DebugPort,
+		/*opt*/ HANDLE ExceptionPort,
+		ULONG JobMemberLevel
+	) ZwCreateProcessEx;
 }
+
+
+/*
+ReactOS:
+	CreateProcessW=CreateProcessInternalW
+		->NtCreateProcess~=NtCreateProcessEx~~=PspCreateProcess
+		->BasepCreateFirstThread
+			->NtCreateThread
+				->PspCreateThread
+		->if (!(dwCreationFlags & CREATE_SUSPENDED))  NtResumeThread
+			->PsResumeThread~=KeResumeThread
+CreateThread(...)=CreateRemoteThread(-1, ...)->
+
+Windows XP:
+ntdll:
+
+RtlCreateUserProcess
+	->ZwCreateProcess->KeFastSystemCall
+ZwCreateProcessEx->KeFastSystemCall
+
+In kernel32: ntdll.NtCreateProcessEx refers to ZwCreateProcessEx in ntdll
+
+*/
