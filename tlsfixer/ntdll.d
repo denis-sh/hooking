@@ -167,9 +167,9 @@ alias bool BOOLEAN;
 
 struct UNICODE_STRING
 {
-	short Length;
-	short MaximumLength;
-	wchar* Buffer;
+	USHORT Length;
+	USHORT MaximumLength;
+	PWSTR  Buffer;
 }
 
 // the following structures can be found here: http://undocumented.ntinternals.net/
