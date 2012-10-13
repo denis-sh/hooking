@@ -12,6 +12,8 @@ import std.c.windows.windows;
 import std.exception;
 import std.string;
 
+import hooking.windows.process;
+
 
 static assert(size_t.sizeof == 4);
 
@@ -48,10 +50,11 @@ void insertCall(alias f, size_t address, string originCode)()
 	enforce(*(ptr - 1) == 0xE9); // JMP rel32
 	enforce(*cast(size_t*) ptr == address + n);
 	
-	DWORD oldProtect = makeWriteable(ptr, 4);
+	auto process = Process.currentLocal;
+	DWORD oldProtect = process.changeMemoryProtection(cast(size_t) ptr, 4, PAGE_EXECUTE_READWRITE);
 	*cast(size_t*) ptr -= cast(size_t) ptr + 4;
-	enforce(VirtualProtect(ptr, 4, oldProtect, &oldProtect));
-	enforce(FlushInstructionCache(GetCurrentProcess(), ptr, 4));
+	process.changeMemoryProtection(cast(size_t) ptr, 4, oldProtect);
+	enforce(FlushInstructionCache(process.handle, ptr, 4));
 }
 
 import std.traits;
@@ -137,33 +140,17 @@ unittest {
 
 private:
 
-extern(Windows)
-BOOL IsBadWritePtr(in LPVOID lp,in UINT_PTR ucb);
-
-DWORD makeWriteable(void* ptr, size_t size) {
-	//enforce(IsBadWritePtr(ptr, size), "Alreasy accessed changed by some program");
-
-	MEMORY_BASIC_INFORMATION mbi;
-	enforce(VirtualQuery(ptr, &mbi, mbi.sizeof));
-	auto tt = mbi.Protect;
-	mbi.Protect &= ~(PAGE_READONLY|PAGE_EXECUTE_READ);
-	mbi.Protect |= PAGE_EXECUTE_READWRITE;
-	DWORD dwOld;
-	enforce(VirtualProtect(ptr, size, mbi.Protect, &dwOld));
-	assert(!IsBadWritePtr(ptr, size));
-	return dwOld;
-}
-
 void insertJump(ubyte* ptr, size_t n, const(void)* target)
 in { assert(n >= 5); }
 body {
-	DWORD oldProtect = makeWriteable(ptr, n);
+	auto process = Process.currentLocal;
+	DWORD oldProtect = process.changeMemoryProtection(cast(size_t) ptr, n, PAGE_EXECUTE_READWRITE);
 	*ptr = 0xE9; // JMP rel32
 	*cast(const(void)**) (ptr+1) = target - (cast(size_t) ptr + 5);
 	foreach(i; 5 .. n)
 		*(ptr + i) = 0x90; // NOP
-	enforce(VirtualProtect(ptr, n, oldProtect, &oldProtect));
-	enforce(FlushInstructionCache(GetCurrentProcess(), ptr, n));
+	process.changeMemoryProtection(cast(size_t) ptr, n, oldProtect);
+	enforce(FlushInstructionCache(process.handle, ptr, n));
 }
 
 void writeAsm(T)(ref ubyte* ptr, in T[] tarr...) {
