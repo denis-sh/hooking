@@ -19,9 +19,56 @@ static assert(size_t.sizeof == 4);
 
 alias size_t RemoteAddress;
 
+/** This struct encapsulates process hooking functionality.
+*/
 struct Process
 {
+	/** Returns a $(D Process) with pseudo handle of current processes retrieved by
+	$(WEB msdn.microsoft.com/en-us/library/windows/desktop/ms683179(v=vs.85).aspx, GetCurrentProcess)
+	that is valid only in the context of current processes.
+	*/
+	@property static Process currentLocal()
+	{ return Process(GetCurrentProcess(), true); }
+
+
+	/** Returns a $(D Process) with "real" handle of current processes
+	that is valid in the context of other processes.
+	*/
+	static Process getCurrentGlobal()
+	{ return Process(GetCurrentProcessId(), false); }
+
+
 	private PROCESS_INFORMATION info;
+
+
+	/** Construct a $(D Process) from a $(D processId).
+	If $(D tryUsePseudoHandle) is $(D true) and $(D processId)
+	is current process id then pseudo handle will be used.
+	*/
+	this(DWORD processId, bool tryUsePseudoHandle)
+	{
+		info.hProcess = tryUsePseudoHandle && processId == GetCurrentProcessId() ?
+			GetCurrentProcess() :
+			OpenProcess(0x001FFFFF /* PROCESS_ALL_ACCESS */, TRUE /* bInheritHandle */, processId);
+		info.dwProcessId = processId;
+	}
+
+
+	/** Construct a $(D Process) from a $(D processHandle).
+	If $(D remainPseudoHandle) is $(D false) and $(D processHandle)
+	is pseudo handle of current process then "real" handle
+	will be used instead.
+	*/
+	this(HANDLE processHandle, bool remainPseudoHandle)
+	{
+		if(!remainPseudoHandle && processHandle == GetCurrentProcess())
+			this = Process(GetCurrentProcessId(), false);
+		else
+		{
+			info.hProcess = processHandle;
+			info.dwProcessId = GetProcessId(processHandle);
+		}
+	}
 
 	this(string file, string arguments, bool launchSuspended, bool createNewConsole = false)
 	in { assert(file); }
@@ -34,10 +81,16 @@ struct Process
 			creationFlags |= CREATE_NEW_CONSOLE;
 		STARTUPINFOW startupInfo = { STARTUPINFOW.sizeof };
 		enforce(CreateProcessW(toUTF16z(file), arguments ? toUTF16(arguments ~ '\0').dup.ptr : null,
-			null, null, TRUE, creationFlags, null, null, &startupInfo, &info));
+			null, null, TRUE /* bInheritHandles */, creationFlags, null, null, &startupInfo, &info));
 	}
 
-	@property Thread primaryThread() { return Thread(info.hThread); }
+
+	@property HANDLE handle()
+	{ return info.hProcess; }
+
+	@property Thread primaryThread()
+	in { assert(info.hThread); }
+	body { return Thread(info.hThread); }
 
 	/// Returns previous access protection of the first page in the specified region
 	DWORD changeMemoryProtection(RemoteAddress address, size_t size, DWORD newProtection)
@@ -276,6 +329,10 @@ public struct PROCESS_INFORMATION
 
 extern(Windows) nothrow
 {
+	extern DWORD GetProcessId(HANDLE Process);
+
+	extern HANDLE OpenProcess(DWORD dwDesiredAccess, BOOL bInheritHandle, DWORD dwProcessId);
+
 	extern BOOL CreateProcessW(
 		LPCWSTR lpApplicationName,
 		LPWSTR lpCommandLine, // The Unicode version of this function, CreateProcessW, can modify the contents of this string.
