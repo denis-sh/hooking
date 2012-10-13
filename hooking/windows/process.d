@@ -88,6 +88,14 @@ struct Process
 	@property HANDLE handle()
 	{ return info.hProcess; }
 
+	HANDLE duplicateHandle()
+	{
+		HANDLE dup;
+		DuplicateHandle(GetCurrentProcess(), info.hProcess, GetCurrentProcess(),
+			&dup, 0, FALSE /* bInheritHandle */, 0x00000002 /* DUPLICATE_SAME_ACCESS */ );
+		return dup;
+	}
+
 	@property Thread primaryThread()
 	in { assert(info.hThread); }
 	body { return Thread(info.hThread); }
