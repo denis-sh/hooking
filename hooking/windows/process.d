@@ -13,11 +13,8 @@ import std.utf;
 import std.exception;
 
 import hooking.windows.thread;
+import hooking.windows.processmemory;
 
-
-static assert(size_t.sizeof == 4);
-
-alias size_t RemoteAddress;
 
 /** This struct encapsulates process hooking functionality.
 */
@@ -92,24 +89,23 @@ struct Process
 	in { assert(info.hThread); }
 	body { return Thread(info.hThread); }
 
+	@property ProcessMemory memory()
+	{ return ProcessMemory(handle); }
+
 	/// Returns previous access protection of the first page in the specified region
 	DWORD changeMemoryProtection(RemoteAddress address, size_t size, DWORD newProtection)
 	{
-		DWORD oldProtection;
-		enforce(VirtualProtectEx(info.hProcess, cast(LPVOID) address, size, newProtection, &oldProtection));
-		return oldProtection;
+		return memory.changeProtection(address, size, newProtection);
 	}
 
 	void readMemory(RemoteAddress baseAddress, void[] buff)
 	{
-		enforce(ReadProcessMemory(info.hProcess, cast(LPCVOID) baseAddress, buff.ptr, buff.length, null));
+		memory.read(baseAddress, buff);
 	}
 
 	void writeMemory(RemoteAddress baseAddress, in void[] buff, bool flushInstructionCache = false)
 	{
-		enforce(WriteProcessMemory(info.hProcess, cast(LPVOID) baseAddress, buff.ptr, buff.length, null));
-		if(flushInstructionCache)
-			enforce(FlushInstructionCache(info.hProcess, cast(LPVOID) baseAddress, buff.length));
+		memory.write(baseAddress, buff, flushInstructionCache);
 	}
 
 	void initializeWindowsStuff()
