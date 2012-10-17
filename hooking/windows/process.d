@@ -128,7 +128,7 @@ struct Process
 		memory.read(address, originCode);         // Save origin code
 
 		// Allocate and fill remote memory for code and data
-		size_t executeStart, remotePtr = allocateRemoteCodeAndData(info.hProcess, dllName, address + 5, executeStart);
+		size_t executeStart, remotePtr = allocateRemoteCodeAndData(this, dllName, address + 5, executeStart);
 		*cast(size_t*)(newCode.ptr + 1) = executeStart - (address + 5);
 
 		// Load our DLL
@@ -169,7 +169,7 @@ struct Process
 private:
 
 // TODO: throw on DLL loading failure
-size_t allocateRemoteCodeAndData(HANDLE hProcess, string dllName, size_t jmpAddress, out size_t executeStart)
+size_t allocateRemoteCodeAndData(Process process, string dllName, size_t jmpAddress, out size_t executeStart)
 {
 	wstring strW = toUTF16(dllName);
 	auto buff = new ubyte[(strW.length + 1) * 2 + 5 + 5 + 5];
@@ -187,8 +187,8 @@ size_t allocateRemoteCodeAndData(HANDLE hProcess, string dllName, size_t jmpAddr
 	write("\0"w);
 
 	// Allocate memory in other process
-	immutable size_t remotePtr = cast(size_t) enforce
-		(VirtualAllocEx(hProcess, null, buff.length, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+	immutable remotePtr = cast(RemoteAddress) enforce
+		(VirtualAllocEx(process.handle, null, buff.length, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
 
 	executeStart = remotePtr + (ptr - buff.ptr);
 
@@ -205,8 +205,7 @@ size_t allocateRemoteCodeAndData(HANDLE hProcess, string dllName, size_t jmpAddr
 
 
 	assert(ptr == buff.ptr + buff.length);
-	enforce(WriteProcessMemory(hProcess, cast(void*) remotePtr, buff.ptr, buff.length, null));
-	enforce(FlushInstructionCache(hProcess, cast(void*) remotePtr, buff.length));
+	process.memory.write(remotePtr, buff, true);
 
 	return remotePtr;
 }
@@ -327,22 +326,6 @@ extern(Windows) nothrow
 	}
 
 	alias const(void)* function(in PVOID ModuleAddress) RtlImageNtHeaderType;
-
-	extern BOOL ReadProcessMemory(
-		HANDLE hProcess,
-		LPCVOID lpBaseAddress,
-		LPVOID lpBuffer,
-		SIZE_T nSize,
-		SIZE_T *lpNumberOfBytesRead
-	);
-
-	extern BOOL WriteProcessMemory(
-		HANDLE hProcess,
-		LPVOID lpBaseAddress,
-		LPCVOID lpBuffer,
-		SIZE_T nSize,
-		SIZE_T *lpNumberOfBytesWritten
-	);
 
 	extern BOOL GetExitCodeProcess(
 		HANDLE hProcess,
