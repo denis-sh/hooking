@@ -82,7 +82,7 @@
   <cv2pdbOptions />
   <objfiles />
   <linkswitches />
-  <libfiles />
+  <libfiles>PhobosAdditions.lib</libfiles>
   <libpaths />
   <deffile />
   <resfile />

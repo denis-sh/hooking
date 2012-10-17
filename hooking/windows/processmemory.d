@@ -12,6 +12,8 @@ import core.sys.windows.windows;
 import std.utf;
 import std.exception;
 
+import unstd.math: isPowerOf2;
+
 
 static assert(size_t.sizeof == 4);
 
@@ -70,19 +72,24 @@ struct ProcessMemory
 }
 
 
-bool isValidMemoryProtection(DWORD protection)
+bool isValidMemoryProtection(DWORD protection) pure
 {
-	switch(protection & ~(PAGE_GUARD | PAGE_NOCACHE | 0x400 /*PAGE_WRITECOMBINE*/))
-	{
-		case PAGE_NOACCESS:  case PAGE_READONLY:
-		case PAGE_READWRITE: case PAGE_WRITECOPY:
-		case PAGE_EXECUTE:   case PAGE_EXECUTE_READ:
-		case PAGE_EXECUTE_READWRITE:
-		case PAGE_EXECUTE_WRITECOPY:
-			return true;
-		default:
-			return false;
-	}
+	protection &= ~(PAGE_GUARD | PAGE_NOCACHE | 0x400 /*PAGE_WRITECOMBINE*/);
+	enum allBits = PAGE_NOACCESS | PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY |
+		PAGE_EXECUTE |PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY;
+	static assert(allBits == 0xFF);
+	return protection && !(protection & ~allBits) && isPowerOf2(protection);
+}
+
+unittest
+{
+	alias isValidMemoryProtection f;
+	assert(f(PAGE_NOACCESS));
+	assert(f(PAGE_EXECUTE_WRITECOPY));
+	assert(f(PAGE_NOACCESS | PAGE_GUARD));
+	assert(!f(PAGE_GUARD));
+	assert(!f(PAGE_NOACCESS | PAGE_READONLY));
+	assert(!f(PAGE_NOACCESS | PAGE_READONLY));
 }
 
 
