@@ -41,6 +41,8 @@ struct ProcessMemory
 
 	/// Returns previous access protection of the first page in the specified region
 	DWORD changeProtection(RemoteAddress address, size_t size, DWORD newProtection)
+	in { assert(isValidMemoryProtection(newProtection)); }
+	body
 	{
 		DWORD oldProtection;
 		enforce(VirtualProtectEx(_processHandle, cast(LPVOID) address, size, newProtection, &oldProtection));
@@ -64,6 +66,22 @@ struct ProcessMemory
 		enforce(WriteProcessMemory(_processHandle, cast(LPVOID) baseAddress, buff.ptr, buff.length, null));
 		if(flushInstructionCache)
 			enforce(FlushInstructionCache(_processHandle, cast(LPVOID) baseAddress, buff.length));
+	}
+}
+
+
+bool isValidMemoryProtection(DWORD protection)
+{
+	switch(protection & ~(PAGE_GUARD | PAGE_NOCACHE | 0x400 /*PAGE_WRITECOMBINE*/))
+	{
+		case PAGE_NOACCESS:  case PAGE_READONLY:
+		case PAGE_READWRITE: case PAGE_WRITECOPY:
+		case PAGE_EXECUTE:   case PAGE_EXECUTE_READ:
+		case PAGE_EXECUTE_READWRITE:
+		case PAGE_EXECUTE_WRITECOPY:
+			return true;
+		default:
+			return false;
 	}
 }
 
