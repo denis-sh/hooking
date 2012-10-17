@@ -92,22 +92,6 @@ struct Process
 	@property ProcessMemory memory()
 	{ return ProcessMemory(handle); }
 
-	/// Returns previous access protection of the first page in the specified region
-	DWORD changeMemoryProtection(RemoteAddress address, size_t size, DWORD newProtection)
-	{
-		return memory.changeProtection(address, size, newProtection);
-	}
-
-	void readMemory(RemoteAddress baseAddress, void[] buff)
-	{
-		memory.read(baseAddress, buff);
-	}
-
-	void writeMemory(RemoteAddress baseAddress, in void[] buff, bool flushInstructionCache = false)
-	{
-		memory.write(baseAddress, buff, flushInstructionCache);
-	}
-
 	void initializeWindowsStuff()
 	{
 		RemoteAddress entryPoint = getEntryPoint(info.hProcess);
@@ -115,17 +99,17 @@ struct Process
 		enum loopCode = x"EB FE"; // JMP $-2
 
 		// Change memory protection (before reading because it can be PAGE_EXECUTE)
-		DWORD oldProtection = changeMemoryProtection(entryPoint, loopCode.length, PAGE_EXECUTE_READWRITE);
+		DWORD oldProtection = memory.changeProtection(entryPoint, loopCode.length, PAGE_EXECUTE_READWRITE);
 		enforce(oldProtection & 0xF0); // Expect some PAGE_EXECUTE_* constant
 
 		ubyte[loopCode.length] originCode;
-		readMemory(entryPoint, originCode);         // Save origin code
-		writeMemory(entryPoint, loopCode, true);    // Write new loop code (and flush instruction cache)
+		memory.read(entryPoint, originCode);         // Save origin code
+		memory.write(entryPoint, loopCode, true);    // Write new loop code (and flush instruction cache)
 		primaryThread.executeUntil(entryPoint);        // Let Windows initialize its stuff
-		writeMemory(entryPoint, originCode, true);  // Restore origin code
+		memory.write(entryPoint, originCode, true);  // Restore origin code
 
 		// Restore origin memory protection
-		enforce(changeMemoryProtection(entryPoint, loopCode.length, oldProtection) == PAGE_EXECUTE_READWRITE);
+		enforce(memory.changeProtection(entryPoint, loopCode.length, oldProtection) == PAGE_EXECUTE_READWRITE);
 	}
 
 	void loadDll(string dllName)
@@ -137,28 +121,28 @@ struct Process
 		ubyte[5 + 2] newCode = cast(const(ubyte)[]) x"E9 00000000 EB FE"; // JMP rel32; JMP $-2;
 
 		// Change memory protection (before reading because it can be PAGE_EXECUTE)
-		DWORD oldProtection = changeMemoryProtection(address, newCode.length, PAGE_EXECUTE_READWRITE);
+		DWORD oldProtection = memory.changeProtection(address, newCode.length, PAGE_EXECUTE_READWRITE);
 		enforce(oldProtection & 0xF0); // Expect some PAGE_EXECUTE_* constant
 
 		ubyte[newCode.length] originCode;
-		readMemory(address, originCode);         // Save origin code
+		memory.read(address, originCode);         // Save origin code
 
 		// Allocate and fill remote memory for code and data
 		size_t executeStart, remotePtr = allocateRemoteCodeAndData(info.hProcess, dllName, address + 5, executeStart);
 		*cast(size_t*)(newCode.ptr + 1) = executeStart - (address + 5);
 
 		// Load our DLL
-		writeMemory(address, newCode, true);
+		memory.write(address, newCode, true);
 		primaryThread.executeUntil(address + newCode.length - 2);
 
 		// Free remote memory
 		enforce(VirtualFreeEx(info.hProcess, cast(void*) remotePtr, 0, MEM_RELEASE));
 
 		// Restore origin code
-		writeMemory(address, originCode, true);
+		memory.write(address, originCode, true);
 
 		// Restore origin memory protection
-		enforce(changeMemoryProtection(address, originCode.length, oldProtection) == PAGE_EXECUTE_READWRITE);
+		enforce(memory.changeProtection(address, originCode.length, oldProtection) == PAGE_EXECUTE_READWRITE);
 
 		// Restore EIP and resume thread
 		primaryThread.changeContext(CONTEXT_CONTROL, (ref context) { context.Eip = address; });

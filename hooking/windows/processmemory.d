@@ -21,6 +21,10 @@ alias size_t RemoteAddress;
 */
 struct ProcessMemory
 {
+	@property static ProcessMemory current()
+	{ return ProcessMemory(GetCurrentProcess()); }
+
+
 	private HANDLE _processHandle;
 
 
