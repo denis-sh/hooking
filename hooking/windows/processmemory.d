@@ -48,6 +48,13 @@ struct ProcessMemory
 		enforce(ReadProcessMemory(_processHandle, cast(LPCVOID) baseAddress, buff.ptr, buff.length, null));
 	}
 
+	T get(T)(RemoteAddress baseAddress)
+	{
+		T res = void;
+		read(baseAddress, (cast(void*) &res)[0 .. T.sizeof]);
+		return res;
+	}
+
 	void write(RemoteAddress baseAddress, in void[] buff, bool flushInstructionCache = false)
 	{
 		enforce(WriteProcessMemory(_processHandle, cast(LPVOID) baseAddress, buff.ptr, buff.length, null));
