@@ -17,7 +17,8 @@ import hooking.windows.pe;
 import std.exception: enforce, enforceEx;
 import std.string: xformat;
 
-import tlsfixer.utils;
+import unstd.math: roundUpToPowerOf2;
+
 import tlsfixer.ntdll;
 
 
@@ -257,7 +258,7 @@ void useTlsIndex(size_t idx) nothrow
 	}
 	else if(idx >= tlsBitmap.SizeOfBitMap)
 	{
-		immutable newSize = toPowerOf2(idx + 1) / 8;
+		immutable newSize = roundUpToPowerOf2(idx + 1) / 8;
 		auto newBuff = cast(ULONG*) allocateProcessHeap(newSize);
 		if(tlsBitmap.Buffer)
 		{
@@ -339,7 +340,7 @@ bool addTlsData(void** teb, in void* tlsstart, in void* tlsend, in int tlsindex)
 	if(tlsindex >= tlsArrayLength)
 	{
 		// Create copy of TLS array
-		immutable newLength = toPowerOf2(tlsindex + 1);
+		immutable newLength = roundUpToPowerOf2(tlsindex + 1);
 		void** newArray = cast(void**) allocateProcessHeap(newLength * (void*).sizeof);
 		if(!newArray) return false;
 
