@@ -31,14 +31,14 @@ struct Process
 	that is valid only in the context of current processes.
 	*/
 	@property static Process currentLocal()
-	{ return Process(GetCurrentProcess(), true); }
+	{ return Process(GetCurrentProcess(), PROCESS_ALL_ACCESS, true); }
 
 
 	/** Returns a $(D Process) with "real" handle of current processes
 	that is valid in the context of other processes.
 	*/
 	static Process getCurrentGlobal()
-	{ return Process(GetCurrentProcessId(), false); }
+	{ return Process(GetCurrentProcessId(), PROCESS_ALL_ACCESS, false); }
 
 
 	/** Returns process identifiers of all running processes.
@@ -80,6 +80,7 @@ struct Process
 	private
 	{
 		HANDLE _handle;
+		DWORD _handleAccess;
 		DWORD _processId;
 		Thread _primaryThread;
 	}
@@ -92,29 +93,46 @@ struct Process
 
 	/** Construct a $(D Process) from a $(D processId).
 	If $(D tryUsePseudoHandle) is $(D true) and $(D processId)
-	is current process id then pseudo handle will be used.
+	is current process id then pseudo handle with $(D PROCESS_ALL_ACCESS)
+	access will be used.
+	Otherwise if $(D desiredAccess) is non-zero then a process handle
+	will be opened with requested access.
+	Otherwise no handle is opened.
 	*/
-	this(DWORD processId, bool tryUsePseudoHandle)
+	this(DWORD processId, DWORD desiredAccess, bool tryUsePseudoHandle)
 	{
-		_handle = tryUsePseudoHandle && processId == GetCurrentProcessId() ?
-			GetCurrentProcess() :
-			enforce(OpenProcess(0X001F0FFF /* PROCESS_ALL_ACCESS */, TRUE /* bInheritHandle */, processId));
+		if(tryUsePseudoHandle && processId == GetCurrentProcessId())
+		{
+			_handle = GetCurrentProcess();
+			_handleAccess = PROCESS_ALL_ACCESS;
+		}
+		else if(desiredAccess)
+		{
+			_handle = enforce(OpenProcess(desiredAccess, TRUE /* bInheritHandle */, processId));
+			_handleAccess = desiredAccess;
+		}
 		_processId = processId;
 	}
 
 
 	/** Construct a $(D Process) from a $(D processHandle).
+	$(D processHandle) access obtained when it was opened
+	should be passed as $(D handleAccess) parameter.
 	If $(D remainPseudoHandle) is $(D false) and $(D processHandle)
-	is pseudo handle of current process then "real" handle
-	will be used instead.
+	is pseudo handle of current process then "real" handle with
+	access from $(D handleAccess) will be opened instead.
+	If $(D remainPseudoHandle) is $(D true) and $(D processHandle)
+	is pseudo handle then $(D handleAccess) will be set to $(D PROCESS_ALL_ACCESS).
 	*/
-	this(HANDLE processHandle, bool remainPseudoHandle)
+	this(HANDLE processHandle, DWORD handleAccess, bool remainPseudoHandle)
 	{
-		if(!remainPseudoHandle && processHandle == GetCurrentProcess())
-			this = Process(GetCurrentProcessId(), false);
+		immutable bool isPseudoHandle = processHandle == GetCurrentProcess();
+		if(!remainPseudoHandle && isPseudoHandle)
+			this = Process(GetCurrentProcessId(), handleAccess, false);
 		else
 		{
 			_handle = processHandle;
+			_handleAccess = isPseudoHandle ? PROCESS_ALL_ACCESS : handleAccess;
 			_processId = GetProcessId(processHandle);
 		}
 	}
@@ -140,6 +158,9 @@ struct Process
 
 	@property HANDLE handle()
 	{ return _handle; }
+
+	@property DWORD handleAccess() const
+	{ return _handleAccess; }
 
 	@property DWORD processId() const
 	{ return _processId; }
@@ -270,7 +291,7 @@ struct Process
 
 	void closeHandles()
 	{
-		if(_handle != GetCurrentProcess())
+		if(_handle && _handle != GetCurrentProcess())
 		{
 			enforce(CloseHandle(_handle));
 			_handle = null;
@@ -279,6 +300,26 @@ struct Process
 			_primaryThread.closeHandle();
 	}
 }
+
+
+enum : DWORD
+{
+	PROCESS_TERMINATE                  = 0x0001,
+	PROCESS_CREATE_THREAD              = 0x0002,
+	PROCESS_SET_SESSIONID              = 0x0004,
+	PROCESS_VM_OPERATION               = 0x0008,
+	PROCESS_VM_READ                    = 0x0010,
+	PROCESS_VM_WRITE                   = 0x0020,
+	PROCESS_DUP_HANDLE                 = 0x0040,
+	PROCESS_CREATE_PROCESS             = 0x0080,
+	PROCESS_SET_QUOTA                  = 0x0100,
+	PROCESS_SET_INFORMATION            = 0x0200,
+	PROCESS_QUERY_INFORMATION          = 0x0400,
+	PROCESS_SUSPEND_RESUME             = 0x0800,
+	PROCESS_QUERY_LIMITED_INFORMATION  = 0x1000,
+
+	PROCESS_ALL_ACCESS        = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0xFFF
+};
 
 
 private:
