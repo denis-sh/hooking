@@ -15,12 +15,16 @@ import std.exception;
 struct Thread
 {
 	package HANDLE _handle;
+	package DWORD _threadId;
 
 	invariant()
-	{ assert(_handle, "Attempting to use unassociated Thread struct"); }
+	{ assert(_handle || _threadId, "Attempting to use unassociated Thread struct"); }
 
 	@property HANDLE handle()
 	{ return _handle; }
+
+	@property DWORD threadId() const
+	{ return _threadId; }
 
 	void suspend() { enforce(SuspendThread(_handle) != -1); }
 
