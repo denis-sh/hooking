@@ -122,6 +122,9 @@ struct Process
 	@property HANDLE handle()
 	{ return info.hProcess; }
 
+	@property DWORD processId() const
+	{ return info.dwProcessId; }
+
 	@property Thread primaryThread()
 	in { assert(info.hThread); }
 	body { return Thread(info.hThread); }
@@ -147,6 +150,57 @@ struct Process
 
 		// Restore origin memory protection
 		enforce(memory.changeProtection(entryPoint, loopCode.length, oldProtection) == PAGE_EXECUTE_READWRITE);
+	}
+
+	@property DWORD[] getThreadIds()
+	{
+		auto NtQuerySystemInformation = cast(NtQuerySystemInformation)
+			enforce(GetProcAddress(LoadLibraryA("ntdll"), "NtQuerySystemInformation"));
+
+		auto buff = processHeap.alloc(0x20000);
+		for(;;)
+		{
+			DWORD bytesReturned = -1;
+			NTSTATUS res = NtQuerySystemInformation(SYSTEM_INFORMATION_CLASS.SystemProcessInformation,
+				buff.ptr, buff.length, &bytesReturned);
+			if(res != STATUS_INFO_LENGTH_MISMATCH)
+			{
+				scope(failure) processHeap.free(buff.ptr);
+				enforce(res >= 0);
+				assert(bytesReturned <= buff.length);
+				buff.length = bytesReturned;
+				break;
+			}
+			processHeap.free(buff.ptr);
+			// integer overflow check needed
+			enforce(buff.length < size_t.max / 2 + 1);
+			buff = processHeap.alloc(buff.length * 2);
+		}
+		scope(exit) processHeap.free(buff.ptr);
+
+		size_t offset = 0;
+		for(;;)
+		{
+			auto sysProcessInfo = cast(SYSTEM_PROCESS_INFORMATION*) (buff.ptr + offset);
+
+			if(cast(DWORD) sysProcessInfo.UniqueProcessId == processId)
+			{
+				auto threadIds = new DWORD[sysProcessInfo.NumberOfThreads];
+				auto sysThreadInfo = cast(SYSTEM_THREAD_INFORMATION*) (sysProcessInfo + 1);
+				foreach(ref threadId; threadIds)
+				{
+					assert(cast(DWORD) sysThreadInfo.ClientId.UniqueProcess == processId);
+					threadId = cast(DWORD) sysThreadInfo.ClientId.UniqueThread;
+					++sysThreadInfo;
+				}
+				return threadIds;
+			}
+
+			enforce(sysProcessInfo.NextEntryOffset, "Process has exited.");
+			offset += sysProcessInfo.NextEntryOffset;
+		}
+
+		assert(0);
 	}
 
 	void loadDll(string dllName)
@@ -371,6 +425,11 @@ extern(Windows) nothrow
 
 	alias LONG NTSTATUS;
 
+	enum : NTSTATUS
+	{
+		STATUS_INFO_LENGTH_MISMATCH = 0xc0000004,
+	}
+
 	alias NTSTATUS function(
 		HANDLE ProcessHandle,
 		int /* PROCESSINFOCLASS */ ProcessInformationClass,
@@ -379,6 +438,61 @@ extern(Windows) nothrow
 		PULONG ReturnLength
 	) NtQueryInformationProcess;
 
+	// From winternl.h
+	enum SYSTEM_INFORMATION_CLASS
+	{
+		SystemProcessInformation = 5,
+	}
+
+	// From winternl.h
+	alias NTSTATUS function(
+		SYSTEM_INFORMATION_CLASS SystemInformationClass,
+		PVOID SystemInformation,
+		ULONG SystemInformationLength,
+		PULONG ReturnLength
+	) NtQuerySystemInformation;
+
 	pragma(lib, "psapi.lib");
 	extern BOOL EnumProcesses(DWORD *pProcessIds, DWORD cb, DWORD *pBytesReturned);
+
+	// From http://msdn.microsoft.com/en-us/library/gg750724(prot.20).aspx
+	// NumberOfThreads from http://undocumented.ntinternals.net/UserMode/Undocumented%20Functions/System%20Information/Structures/SYSTEM_PROCESS_INFORMATION.html
+	struct SYSTEM_PROCESS_INFORMATION
+	{
+		ULONG NextEntryOffset;
+		ULONG NumberOfThreads;
+		BYTE Reserved1[52 - ULONG.sizeof];
+		PVOID Reserved2[3];
+		HANDLE UniqueProcessId;
+		PVOID Reserved3;
+		ULONG HandleCount;
+		BYTE Reserved4[4];
+		PVOID Reserved5[11];
+		SIZE_T PeakPagefileUsage;
+		SIZE_T PrivatePageCount;
+		LARGE_INTEGER Reserved6[6];
+	}
+
+	// From http://msdn.microsoft.com/en-us/library/gg750647(prot.20).aspx
+	struct CLIENT_ID
+	{
+		HANDLE UniqueProcess;
+		HANDLE UniqueThread;
+	}
+
+	// From http://msdn.microsoft.com/en-us/library/gg750724(prot.20).aspx
+	struct SYSTEM_THREAD_INFORMATION
+	{
+		LARGE_INTEGER KernelTime;
+		LARGE_INTEGER UserTime;
+		LARGE_INTEGER CreateTime;
+		ULONG WaitTime;
+		PVOID StartAddress;
+		CLIENT_ID ClientId;
+		LONG Priority;
+		LONG BasePriority;
+		ULONG ContextSwitches;
+		ULONG ThreadState;
+		ULONG WaitReason;
+	}
 }
