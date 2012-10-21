@@ -123,6 +123,10 @@ struct Process
 	access from $(D handleAccess) will be opened instead.
 	If $(D remainPseudoHandle) is $(D true) and $(D processHandle)
 	is pseudo handle then $(D handleAccess) will be set to $(D PROCESS_ALL_ACCESS).
+
+	$(D processId) will not be set iff resulting $(D handleAccess)
+	doesn't include $(D PROCESS_QUERY_INFORMATION) or $(D PROCESS_QUERY_LIMITED_INFORMATION).
+	In this case calling $(D closeHandles) will result in unassociation of this struct.
 	*/
 	this(HANDLE processHandle, DWORD handleAccess, bool remainPseudoHandle)
 	{
@@ -133,7 +137,8 @@ struct Process
 		{
 			_handle = processHandle;
 			_handleAccess = isPseudoHandle ? PROCESS_ALL_ACCESS : handleAccess;
-			_processId = GetProcessId(processHandle);
+			if(_handleAccess & (PROCESS_QUERY_INFORMATION  | PROCESS_QUERY_LIMITED_INFORMATION))
+				_processId = enforce(GetProcessId(processHandle));
 		}
 	}
 
@@ -288,16 +293,16 @@ struct Process
 		// Note: If the process returned STILL_ACTIVE(259) we do not care
 		return exitCode;
 	}
+}
 
-	void closeHandles()
+void closeHandles(ref Process process)
+{
+	if(process._handle && process._handle != GetCurrentProcess())
 	{
-		if(_handle && _handle != GetCurrentProcess())
-		{
-			enforce(CloseHandle(_handle));
-			_handle = null;
-		}
-		_primaryThread.closeHandle();
+		enforce(CloseHandle(process._handle));
+		process._handle = null;
 	}
+	process._primaryThread.closeHandle();
 }
 
 
