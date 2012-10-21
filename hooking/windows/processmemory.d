@@ -29,6 +29,9 @@ struct ProcessMemory
 
 	private HANDLE _processHandle;
 
+	invariant()
+	{ assert(_processHandle, "Attempting to use unassociated ProcessMemory struct"); }
+
 
 	@disable this();
 

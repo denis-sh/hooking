@@ -22,6 +22,9 @@ struct Heap
 {
 	private HANDLE _handle;
 
+	invariant()
+	{ assert(_handle, "Attempting to use unassociated Heap struct"); }
+
 	@property HANDLE handle()
 	{ return _handle; }
 

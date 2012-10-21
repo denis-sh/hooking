@@ -16,6 +16,9 @@ struct Thread
 {
 	private HANDLE handle;
 
+	invariant()
+	{ assert(handle, "Attempting to use unassociated Thread struct"); }
+
 	void suspend() { enforce(SuspendThread(handle) != -1); }
 
 	void resume() { enforce(ResumeThread(handle) != -1); }

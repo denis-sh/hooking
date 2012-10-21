@@ -75,6 +75,9 @@ struct Process
 
 	private PROCESS_INFORMATION info;
 
+	invariant()
+	{ assert(info.dwProcessId || info.hProcess, "Attempting to use unassociated Process struct"); }
+
 
 	/** Construct a $(D Process) from a $(D processId).
 	If $(D tryUsePseudoHandle) is $(D true) and $(D processId)
