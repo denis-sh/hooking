@@ -12,6 +12,7 @@ import core.sys.windows.windows;
 import std.utf;
 import std.exception;
 
+import hooking.windows.heap;
 import hooking.windows.thread;
 import hooking.windows.processmemory;
 
@@ -33,6 +34,30 @@ struct Process
 	*/
 	static Process getCurrentGlobal()
 	{ return Process(GetCurrentProcessId(), false); }
+
+
+	@property static DWORD[] getRunningIds()
+	{
+		DWORD bytesReturned = -1;
+		auto buff = processHeap.alloc!DWORD(0x100);
+		for(;;)
+		{
+			immutable buffBytes = buff.length * DWORD.sizeof;
+			{
+				scope(failure) processHeap.free(buff.ptr);
+				enforce(EnumProcesses(buff.ptr, buffBytes, &bytesReturned));
+			}
+			assert(bytesReturned % DWORD.sizeof == 0);
+			if(bytesReturned < buffBytes)
+				break;
+			processHeap.free(buff.ptr);
+			// As DWORD.sizeof (4) >= 2, no integer overflow here:
+			buff = processHeap.alloc!DWORD(buff.length * 2);
+		}
+		auto res = buff[0 .. bytesReturned / DWORD.sizeof].dup;
+		processHeap.free(buff.ptr);
+		return res;
+	}
 
 
 	private PROCESS_INFORMATION info;
@@ -341,4 +366,7 @@ extern(Windows) nothrow
 		ULONG ProcessInformationLength,
 		PULONG ReturnLength
 	) NtQueryInformationProcess;
+
+	pragma(lib, "psapi.lib");
+	extern BOOL EnumProcesses(DWORD *pProcessIds, DWORD cb, DWORD *pBytesReturned);
 }
