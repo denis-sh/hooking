@@ -84,7 +84,7 @@ struct Process
 	{
 		info.hProcess = tryUsePseudoHandle && processId == GetCurrentProcessId() ?
 			GetCurrentProcess() :
-			OpenProcess(0x001FFFFF /* PROCESS_ALL_ACCESS */, TRUE /* bInheritHandle */, processId);
+			enforce(OpenProcess(0X001F0FFF /* PROCESS_ALL_ACCESS */, TRUE /* bInheritHandle */, processId));
 		info.dwProcessId = processId;
 	}
 
