@@ -26,7 +26,7 @@ syntax in a DLL, you will not be able to load the DLL explicitly using LoadLibra
 on versions of Windows prior to Windows Vista.
 */
 void fixLibraryLoading() {
-	if(cast(ubyte) GetVersion() >= 6) // Windwos Vista or later
+	if(cast(ubyte) GetVersion() >= 6) // Windows Vista or later
 		return;
 	if(libraryLoadingFixed)
 		return;
