@@ -75,6 +75,7 @@ struct Process
 
 	private PROCESS_INFORMATION info;
 
+	version(none) // invariant disabled because of @@@BUG7892@@@
 	invariant()
 	{ assert(info.dwProcessId || info.hProcess, "Attempting to use unassociated Process struct"); }
 
