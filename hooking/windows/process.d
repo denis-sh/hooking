@@ -11,6 +11,7 @@ module hooking.windows.process;
 import core.sys.windows.windows;
 import std.utf;
 import std.exception;
+import std.algorithm: max;
 
 import hooking.windows.heap;
 import hooking.windows.thread;
@@ -172,9 +173,9 @@ struct Process
 				break;
 			}
 			processHeap.free(buff.ptr);
-			// integer overflow check needed
-			enforce(buff.length < size_t.max / 2 + 1);
-			buff = processHeap.alloc(buff.length * 2);
+			// Possible integer overflow will not lead to memory corruption.
+			// And Windows definitely will not support such amount of processes/threads.
+			buff = processHeap.alloc(max(bytesReturned + 0x2000, buff.length * 2));
 		}
 		scope(exit) processHeap.free(buff.ptr);
 
