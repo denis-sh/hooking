@@ -14,7 +14,7 @@ import std.exception;
 
 struct Thread
 {
-	private HANDLE handle;
+	package HANDLE handle;
 
 	invariant()
 	{ assert(handle, "Attempting to use unassociated Thread struct"); }

@@ -73,11 +73,17 @@ struct Process
 	}
 
 
-	private PROCESS_INFORMATION info;
+	private
+	{
+		HANDLE _handle;
+		DWORD _processId;
+		Thread _primaryThread;
+	}
+	
 
 	version(none) // invariant disabled because of @@@BUG7892@@@
 	invariant()
-	{ assert(info.dwProcessId || info.hProcess, "Attempting to use unassociated Process struct"); }
+	{ assert(_processId || _handle, "Attempting to use unassociated Process struct"); }
 
 
 	/** Construct a $(D Process) from a $(D processId).
@@ -86,10 +92,10 @@ struct Process
 	*/
 	this(DWORD processId, bool tryUsePseudoHandle)
 	{
-		info.hProcess = tryUsePseudoHandle && processId == GetCurrentProcessId() ?
+		_handle = tryUsePseudoHandle && processId == GetCurrentProcessId() ?
 			GetCurrentProcess() :
 			enforce(OpenProcess(0X001F0FFF /* PROCESS_ALL_ACCESS */, TRUE /* bInheritHandle */, processId));
-		info.dwProcessId = processId;
+		_processId = processId;
 	}
 
 
@@ -104,8 +110,8 @@ struct Process
 			this = Process(GetCurrentProcessId(), false);
 		else
 		{
-			info.hProcess = processHandle;
-			info.dwProcessId = GetProcessId(processHandle);
+			_handle = processHandle;
+			_processId = GetProcessId(processHandle);
 		}
 	}
 
@@ -119,27 +125,31 @@ struct Process
 		if(createNewConsole)
 			creationFlags |= CREATE_NEW_CONSOLE;
 		STARTUPINFOW startupInfo = { STARTUPINFOW.sizeof };
+		PROCESS_INFORMATION info;
 		enforce(CreateProcessW(toUTF16z(file), arguments ? toUTF16(arguments ~ '\0').dup.ptr : null,
 			null, null, TRUE /* bInheritHandles */, creationFlags, null, null, &startupInfo, &info));
+		_handle = info.hProcess;
+		_processId = info.dwProcessId;
+		_primaryThread = Thread(info.hThread);
 	}
 
 
 	@property HANDLE handle()
-	{ return info.hProcess; }
+	{ return _handle; }
 
 	@property DWORD processId() const
-	{ return info.dwProcessId; }
+	{ return _processId; }
 
 	@property Thread primaryThread()
-	in { assert(info.hThread); }
-	body { return Thread(info.hThread); }
+	in { assert(_primaryThread.handle); }
+	body { return _primaryThread; }
 
 	@property ProcessMemory memory()
 	{ return ProcessMemory(handle); }
 
 	void initializeWindowsStuff()
 	{
-		RemoteAddress entryPoint = getEntryPoint(info.hProcess);
+		RemoteAddress entryPoint = getEntryPoint(_handle);
 
 		enum loopCode = x"EB FE"; // JMP $-2
 
@@ -232,7 +242,7 @@ struct Process
 		primaryThread.executeUntil(address + newCode.length - 2);
 
 		// Free remote memory
-		enforce(VirtualFreeEx(info.hProcess, cast(void*) remotePtr, 0, MEM_RELEASE));
+		enforce(VirtualFreeEx(_handle, cast(void*) remotePtr, 0, MEM_RELEASE));
 
 		// Restore origin code
 		memory.write(address, originCode, true);
@@ -247,19 +257,19 @@ struct Process
 
 	int waitForExit()
 	{
-		WaitForSingleObject(info.hProcess, INFINITE);
+		WaitForSingleObject(_handle, INFINITE);
 		DWORD exitCode;
-		enforce(GetExitCodeProcess(info.hProcess, &exitCode));
+		enforce(GetExitCodeProcess(_handle, &exitCode));
 		// Note: If the process returned STILL_ACTIVE(259) we do not care
 		return exitCode;
 	}
 
 	void closeHandles()
 	{
-		if(info.hProcess != GetCurrentProcess())
-			enforce(CloseHandle(info.hProcess));
-		if(info.hThread)
-			enforce(CloseHandle(info.hThread));
+		if(_handle != GetCurrentProcess())
+			enforce(CloseHandle(_handle));
+		if(primaryThread.handle)
+			enforce(CloseHandle(primaryThread.handle));
 	}
 }
 
