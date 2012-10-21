@@ -252,8 +252,10 @@ struct Process
 
 	void closeHandles()
 	{
-		enforce(CloseHandle(info.hProcess));
-		enforce(CloseHandle(info.hThread));
+		if(info.hProcess != GetCurrentProcess())
+			enforce(CloseHandle(info.hProcess));
+		if(info.hThread)
+			enforce(CloseHandle(info.hThread));
 	}
 }
 
