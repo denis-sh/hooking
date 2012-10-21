@@ -14,14 +14,17 @@ import std.exception;
 
 struct Thread
 {
-	package HANDLE handle;
+	package HANDLE _handle;
 
 	invariant()
-	{ assert(handle, "Attempting to use unassociated Thread struct"); }
+	{ assert(_handle, "Attempting to use unassociated Thread struct"); }
 
-	void suspend() { enforce(SuspendThread(handle) != -1); }
+	@property HANDLE handle()
+	{ return _handle; }
 
-	void resume() { enforce(ResumeThread(handle) != -1); }
+	void suspend() { enforce(SuspendThread(_handle) != -1); }
+
+	void resume() { enforce(ResumeThread(_handle) != -1); }
 
 
 	/** Waits for thread's EIP to be fixed on $(D address) (e.g. because of a `JMP $-2;` loop).
@@ -29,7 +32,7 @@ struct Thread
 	*/
 	void executeUntil(size_t address)
 	{
-		DWORD suspendCount = ResumeThread(handle);
+		DWORD suspendCount = ResumeThread(_handle);
 		enforce(suspendCount != -1);
 		foreach(i; 1 .. suspendCount)
 			resume();
@@ -39,7 +42,7 @@ struct Thread
 			Sleep(20);
 			CONTEXT context;
 			context.ContextFlags = CONTEXT_CONTROL;
-			enforce(GetThreadContext(handle, &context));
+			enforce(GetThreadContext(_handle, &context));
 			if(context.Eip == address)
 				break;
 			enforce(i < 50);
@@ -52,13 +55,13 @@ struct Thread
 	{
 		CONTEXT context;
 		context.ContextFlags = flags;
-		enforce(GetThreadContext(handle, &context));
+		enforce(GetThreadContext(_handle, &context));
 		return context;
 	}
 
 	void setContext(CONTEXT context)
 	{
-		enforce(SetThreadContext(handle, &context));
+		enforce(SetThreadContext(_handle, &context));
 	}
 
 	void changeContext(DWORD getFlags, scope void delegate(ref CONTEXT) del)
@@ -66,5 +69,11 @@ struct Thread
 		CONTEXT context = getContext(getFlags);
 		del(context);
 		setContext(context);
+	}
+
+	void closeHandle()
+	{
+		enforce(CloseHandle(_handle));
+		_handle = null;
 	}
 }

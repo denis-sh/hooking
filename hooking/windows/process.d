@@ -141,7 +141,7 @@ struct Process
 	{ return _processId; }
 
 	@property Thread primaryThread()
-	in { assert(_primaryThread.handle); }
+	in { assert(_primaryThread._handle); }
 	body { return _primaryThread; }
 
 	@property ProcessMemory memory()
@@ -268,8 +268,8 @@ struct Process
 	{
 		if(_handle != GetCurrentProcess())
 			enforce(CloseHandle(_handle));
-		if(primaryThread.handle)
-			enforce(CloseHandle(primaryThread.handle));
+		if(_primaryThread._handle)
+			_primaryThread.closeHandle();
 	}
 }
 
