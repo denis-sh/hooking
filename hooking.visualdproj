@@ -189,6 +189,7 @@
    <Folder name="windows">
     <File path="hooking\windows\kernel32.d" />
     <File path="hooking\windows\pe.d" />
+    <File path="hooking\windows\heap.d" />
     <File path="hooking\windows\thread.d" />
     <File path="hooking\windows\processmemory.d" />
     <File path="hooking\windows\process.d" />
