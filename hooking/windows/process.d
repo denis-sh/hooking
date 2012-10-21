@@ -267,7 +267,10 @@ struct Process
 	void closeHandles()
 	{
 		if(_handle != GetCurrentProcess())
+		{
 			enforce(CloseHandle(_handle));
+			_handle = null;
+		}
 		if(_primaryThread._handle)
 			_primaryThread.closeHandle();
 	}
