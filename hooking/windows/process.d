@@ -36,6 +36,18 @@ struct Process
 	{ return Process(GetCurrentProcessId(), false); }
 
 
+	/** Returns process identifiers of all running processes.
+
+	Example:
+	---
+	import std.algorithm;
+
+	bool isProcessRunning(int processId)
+	{
+		return Process.getRunningIds().canFind(processId);
+	}
+	---
+	*/
 	@property static DWORD[] getRunningIds()
 	{
 		DWORD bytesReturned = -1;
