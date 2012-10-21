@@ -11,6 +11,9 @@ module hooking.windows.thread;
 import core.sys.windows.windows;
 import std.exception;
 
+@property bool associated(in Thread thread) @safe pure nothrow
+{ return thread._handle || thread._threadId; }
+
 
 struct Thread
 {
@@ -18,7 +21,7 @@ struct Thread
 	package DWORD _threadId;
 
 	invariant()
-	{ assert(_handle || _threadId, "Attempting to use unassociated Thread struct"); }
+	{ assert(this.associated, "Attempting to use unassociated Thread struct"); }
 
 	@property HANDLE handle()
 	{ return _handle; }

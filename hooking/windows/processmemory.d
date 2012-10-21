@@ -19,6 +19,10 @@ static assert(size_t.sizeof == 4);
 
 alias size_t RemoteAddress;
 
+@property bool associated(in ProcessMemory memory) @safe pure nothrow
+{ return !!memory._processHandle; }
+
+
 /** This struct encapsulates process memory manipulation functionality.
 */
 struct ProcessMemory
@@ -30,7 +34,7 @@ struct ProcessMemory
 	private HANDLE _processHandle;
 
 	invariant()
-	{ assert(_processHandle, "Attempting to use unassociated ProcessMemory struct"); }
+	{ assert(this.associated, "Attempting to use unassociated ProcessMemory struct"); }
 
 
 	@disable this();

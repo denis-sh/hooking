@@ -12,6 +12,10 @@ import core.sys.windows.windows;
 import std.exception;
 
 
+@property bool associated(in Heap heap) @safe pure nothrow
+{ return !!heap._handle; }
+
+
 /// Returns default heap of the calling process.
 @property Heap processHeap()
 { return Heap(GetProcessHeap()); }
@@ -23,7 +27,7 @@ struct Heap
 	private HANDLE _handle;
 
 	invariant()
-	{ assert(_handle, "Attempting to use unassociated Heap struct"); }
+	{ assert(this.associated, "Attempting to use unassociated Heap struct"); }
 
 	@property HANDLE handle()
 	{ return _handle; }

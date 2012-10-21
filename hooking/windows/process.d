@@ -18,6 +18,10 @@ import hooking.windows.thread;
 import hooking.windows.processmemory;
 
 
+@property bool associated(in Process process) @safe pure nothrow
+{ return process._handle || process._processId; }
+
+
 /** This struct encapsulates process hooking functionality.
 */
 struct Process
@@ -83,7 +87,7 @@ struct Process
 
 	version(none) // invariant disabled because of @@@BUG7892@@@
 	invariant()
-	{ assert(_processId || _handle, "Attempting to use unassociated Process struct"); }
+	{ assert(this.associated, "Attempting to use unassociated Process struct"); }
 
 
 	/** Construct a $(D Process) from a $(D processId).
