@@ -296,8 +296,7 @@ struct Process
 			enforce(CloseHandle(_handle));
 			_handle = null;
 		}
-		if(_primaryThread._handle)
-			_primaryThread.closeHandle();
+		_primaryThread.closeHandle();
 	}
 }
 

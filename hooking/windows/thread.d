@@ -77,10 +77,13 @@ struct Thread
 		del(context);
 		setContext(context);
 	}
+}
 
-	void closeHandle()
+void closeHandle(ref Thread thread)
+{
+	if(thread._handle)
 	{
-		enforce(CloseHandle(_handle));
-		_handle = null;
+		enforce(CloseHandle(thread._handle));
+		thread._handle = null;
 	}
 }
