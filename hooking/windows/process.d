@@ -382,7 +382,7 @@ RemoteAddress getEntryPoint(HANDLE hProcess)
 
 	RemoteAddress[6] /* PROCESS_BASIC_INFORMATION */ pbi;
 	ULONG returnLength;
-	NtQueryInformationProcess(hProcess, 0 /* PROCESSINFOCLASS.ProcessBasicInformation */, &pbi, pbi.sizeof, &returnLength);
+	enforce(NtQueryInformationProcess(hProcess, 0 /* PROCESSINFOCLASS.ProcessBasicInformation */, &pbi, pbi.sizeof, &returnLength) >= 0);
 	assert(returnLength == pbi.sizeof);
 
 	auto mem = ProcessMemory(hProcess);
