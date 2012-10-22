@@ -13,6 +13,7 @@ import std.utf;
 import std.exception;
 import std.algorithm: max;
 
+import hooking.windows.c.winternl;
 import hooking.windows.heap;
 import hooking.windows.thread;
 import hooking.windows.processmemory;
@@ -492,76 +493,6 @@ extern(Windows) nothrow
 		LPDWORD lpExitCode
 	);
 
-	alias LONG NTSTATUS;
-
-	enum : NTSTATUS
-	{
-		STATUS_INFO_LENGTH_MISMATCH = 0xc0000004,
-	}
-
-	alias NTSTATUS function(
-		HANDLE ProcessHandle,
-		int /* PROCESSINFOCLASS */ ProcessInformationClass,
-		PVOID ProcessInformation,
-		ULONG ProcessInformationLength,
-		PULONG ReturnLength
-	) NtQueryInformationProcess;
-
-	// From winternl.h
-	enum SYSTEM_INFORMATION_CLASS
-	{
-		SystemProcessInformation = 5,
-	}
-
-	// From winternl.h
-	alias NTSTATUS function(
-		SYSTEM_INFORMATION_CLASS SystemInformationClass,
-		PVOID SystemInformation,
-		ULONG SystemInformationLength,
-		PULONG ReturnLength
-	) NtQuerySystemInformation;
-
 	pragma(lib, "psapi.lib");
 	extern BOOL EnumProcesses(DWORD *pProcessIds, DWORD cb, DWORD *pBytesReturned);
-
-	// From http://msdn.microsoft.com/en-us/library/gg750724(prot.20).aspx
-	// NumberOfThreads from http://undocumented.ntinternals.net/UserMode/Undocumented%20Functions/System%20Information/Structures/SYSTEM_PROCESS_INFORMATION.html
-	struct SYSTEM_PROCESS_INFORMATION
-	{
-		ULONG NextEntryOffset;
-		ULONG NumberOfThreads;
-		BYTE Reserved1[52 - ULONG.sizeof];
-		PVOID Reserved2[3];
-		HANDLE UniqueProcessId;
-		PVOID Reserved3;
-		ULONG HandleCount;
-		BYTE Reserved4[4];
-		PVOID Reserved5[11];
-		SIZE_T PeakPagefileUsage;
-		SIZE_T PrivatePageCount;
-		LARGE_INTEGER Reserved6[6];
-	}
-
-	// From http://msdn.microsoft.com/en-us/library/gg750647(prot.20).aspx
-	struct CLIENT_ID
-	{
-		HANDLE UniqueProcess;
-		HANDLE UniqueThread;
-	}
-
-	// From http://msdn.microsoft.com/en-us/library/gg750724(prot.20).aspx
-	struct SYSTEM_THREAD_INFORMATION
-	{
-		LARGE_INTEGER KernelTime;
-		LARGE_INTEGER UserTime;
-		LARGE_INTEGER CreateTime;
-		ULONG WaitTime;
-		PVOID StartAddress;
-		CLIENT_ID ClientId;
-		LONG Priority;
-		LONG BasePriority;
-		ULONG ContextSwitches;
-		ULONG ThreadState;
-		ULONG WaitReason;
-	}
 }

@@ -11,6 +11,7 @@ module tlsfixer.tlsfixes;
 
 import std.c.windows.windows;
 import tlsfixer.dlltls;
+import hooking.windows.c.winternl: NTSTATUS;
 import hooking.windows.pe;
 import hooking.x86.interceptor;
 import std.exception;
@@ -31,7 +32,6 @@ void fixLibraryLoading() {
 	if(libraryLoadingFixed)
 		return;
 
-	alias LONG NTSTATUS;
 	alias extern(Windows) NTSTATUS function(ULONG Flags, ULONG *State, ULONG *Cookie) nothrow LdrLockLoaderLockType;
 	alias extern(Windows) NTSTATUS function(ULONG Flags, ULONG Cookie) nothrow LdrUnlockLoaderLockType;
 

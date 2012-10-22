@@ -13,6 +13,7 @@ module tlsfixer.ntdll;
 
 import core.sys.windows.windows;
 
+import hooking.windows.c.winternl: UNICODE_STRING;
 import hooking.x86.utils;
 
 
@@ -164,13 +165,6 @@ struct LdrpTlsListEntry
 
 
 alias bool BOOLEAN;
-
-struct UNICODE_STRING
-{
-	USHORT Length;
-	USHORT MaximumLength;
-	PWSTR  Buffer;
-}
 
 // the following structures can be found here: http://undocumented.ntinternals.net/
 struct LDR_MODULE

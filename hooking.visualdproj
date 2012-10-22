@@ -187,6 +187,9 @@
  <Folder name="hooking">
   <Folder name="hooking">
    <Folder name="windows">
+    <Folder name="c">
+     <File path="hooking\windows\c\winternl.d" />
+    </Folder>
     <File path="hooking\windows\kernel32.d" />
     <File path="hooking\windows\pe.d" />
     <File path="hooking\windows\heap.d" />
