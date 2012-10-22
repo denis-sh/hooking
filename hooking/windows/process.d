@@ -158,7 +158,8 @@ struct Process
 			null, null, TRUE /* bInheritHandles */, creationFlags, null, null, &startupInfo, &info));
 		_handle = info.hProcess;
 		_processId = info.dwProcessId;
-		_primaryThread = Thread(info.hThread, info.dwThreadId);
+		_primaryThread._handle = info.hThread;
+		_primaryThread._threadId = info.dwThreadId;
 	}
 
 

@@ -8,6 +8,7 @@ Authors: Denis Shelomovskij
 */
 module hooking.windows.thread;
 
+import hooking.windows.c.winternl;
 import core.sys.windows.windows;
 import std.exception;
 
@@ -23,11 +24,22 @@ struct Thread
 	invariant()
 	{ assert(this.associated, "Attempting to use unassociated Thread struct"); }
 
+
+	this(HANDLE threadHandle)
+	{
+		_handle = threadHandle;
+		_threadId = getThreadOrProcessIdOfThread(_handle, false);
+	}
+
+
 	@property HANDLE handle()
 	{ return _handle; }
 
 	@property DWORD threadId() const
 	{ return _threadId; }
+
+	@property DWORD ownerProcessId()
+	{ return enforce(getThreadOrProcessIdOfThread(_handle, true)); }
 
 	void suspend() { enforce(SuspendThread(_handle) != -1); }
 
@@ -85,5 +97,51 @@ void closeHandle(ref Thread thread)
 	{
 		enforce(CloseHandle(thread._handle));
 		thread._handle = null;
+	}
+}
+
+
+// WinAPI helpers
+// --------------------------------------------------
+
+DWORD getThreadOrProcessIdOfThread(HANDLE threadHandle, bool returnProcessId) nothrow
+{
+	if(cast(ubyte) GetVersion() >= 6)
+	{
+		// GetThreadId and GetProcessIdOfThread present since Windows Vista
+		alias extern(Windows) nothrow DWORD function(HANDLE Thread) Type;
+		if(returnProcessId)
+		{
+			static Type GetProcessIdOfThread;
+			if(!GetProcessIdOfThread)
+			{
+				GetProcessIdOfThread = cast(Type) GetProcAddress(LoadLibraryA("kernel32"), "GetProcessIdOfThread");
+				assert(GetProcessIdOfThread);
+			}
+			return GetProcessIdOfThread(threadHandle);
+		}
+		else
+		{
+			static Type GetThreadId;
+			if(!GetThreadId)
+			{
+				GetThreadId = cast(Type) GetProcAddress(LoadLibraryA("kernel32"), "GetThreadId");
+				assert(GetThreadId);
+			}
+			return GetThreadId(threadHandle);
+		}
+	}
+	else
+	{
+		auto NtQueryInformationThread = cast(NtQueryInformationThread)
+			GetProcAddress(LoadLibraryA("ntdll"), "NtQueryInformationThread");
+		assert(NtQueryInformationThread);
+
+		THREAD_BASIC_INFORMATION tbi;
+		ULONG returnLength;
+		if(NtQueryInformationThread(threadHandle, 0 /* THREADINFOCLASS.ThreadBasicInformation */, &tbi, tbi.sizeof, &returnLength) < 0)
+			return 0;
+		assert(returnLength == tbi.sizeof);
+		return cast(DWORD) (returnProcessId ? tbi.ClientId.UniqueProcess : tbi.ClientId.UniqueThread);
 	}
 }

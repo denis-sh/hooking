@@ -42,6 +42,33 @@ struct CLIENT_ID
 
 
 alias NTSTATUS function(
+	HANDLE ThreadHandle,
+	int /* THREADINFOCLASS */ ThreadInformationClass,
+	PVOID ThreadInformation,
+	ULONG ThreadInformationLength,
+	PULONG ReturnLength
+) NtQueryInformationThread;
+
+
+// Defined in basetsd.h
+alias ULONG_PTR KAFFINITY;
+
+// Not defined in Microsoft SDK's headers
+alias LONG KPRIORITY;
+
+// From http://undocumented.ntinternals.net/UserMode/Structures/THREAD_BASIC_INFORMATION.html
+struct THREAD_BASIC_INFORMATION
+{
+	NTSTATUS   ExitStatus;
+	PVOID      TebBaseAddress;
+	CLIENT_ID  ClientId;
+	KAFFINITY  AffinityMask;
+	KPRIORITY  Priority;
+	KPRIORITY  BasePriority;
+}
+
+
+alias NTSTATUS function(
 	HANDLE ProcessHandle,
 	int /* PROCESSINFOCLASS */ ProcessInformationClass,
 	PVOID ProcessInformation,
