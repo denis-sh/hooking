@@ -39,13 +39,17 @@ struct Heap
 
 	void realloc(T)(ref T[] array, size_t newCount, DWORD flags = 0)
 	{
-		array = enforce(cast(T*) HeapReAlloc(_handle, flags, array.ptr, countToBytes(T.sizeof, newCount)))[0 .. newCount];
+		array = array ?
+			enforce(cast(T*) HeapReAlloc(_handle, flags, array.ptr, countToBytes(T.sizeof, newCount)))[0 .. newCount]
+			: alloc!T(newCount);
 	}
 
 	void destructiveRealloc(T)(ref T[] array, size_t newCount)
 	{
 		immutable size_t newBytes = countToBytes(T.sizeof, newCount);
-		if(HeapReAlloc(_handle, HEAP_REALLOC_IN_PLACE_ONLY, array.ptr, newBytes))
+		if(!array)
+			array = alloc!T(newCount);
+		else if(HeapReAlloc(_handle, HEAP_REALLOC_IN_PLACE_ONLY, array.ptr, newBytes))
 			array = array.ptr[0 .. newCount];
 		else
 		{

@@ -445,8 +445,7 @@ HMODULE[] helperEnumProcessModules(HANDLE hProcess)
 	DWORD needed = 0;
 	do
 	{
-		if(buff) processHeap.free(buff.ptr);
-		buff = processHeap.alloc!HMODULE(max(needed + 0x100, buff.length * 2));
+		processHeap.destructiveRealloc!HMODULE(buff, max(needed + 0x100, buff.length * 2));
 		scope(failure) processHeap.free(buff.ptr);
 		enforce(EnumProcessModules(hProcess, buff.ptr, buff.length * HMODULE.sizeof, &needed));
 		assert(needed % HMODULE.sizeof == 0);
