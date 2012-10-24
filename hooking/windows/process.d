@@ -199,6 +199,13 @@ struct Process
 		enforce(memory.changeProtection(entryPoint, loopCode.length, oldProtection) == PAGE_EXECUTE_READWRITE);
 	}
 
+	HMODULE[] getModules()
+	{
+		auto buff = helperEnumProcessModules(_handle);
+		scope(exit) processHeap.free(buff.ptr);
+		return buff.dup;
+	}
+
 	@property DWORD[] getThreadIds()
 	{
 		auto NtQuerySystemInformation = cast(NtQuerySystemInformation)
@@ -429,6 +436,27 @@ DWORD getEntryPoint(LPCWSTR file)
 }
 
 
+// WinAPI helpers
+// --------------------------------------------------
+
+HMODULE[] helperEnumProcessModules(HANDLE hProcess)
+{
+	HMODULE[] buff;
+	DWORD needed = 0;
+	do
+	{
+		if(buff) processHeap.free(buff.ptr);
+		buff = processHeap.alloc!HMODULE(max(needed + 0x100, buff.length * 2));
+		scope(failure) processHeap.free(buff.ptr);
+		enforce(EnumProcessModules(hProcess, buff.ptr, buff.length * HMODULE.sizeof, &needed));
+		assert(needed % HMODULE.sizeof == 0);
+		needed /= HMODULE.sizeof;
+	}
+	while(needed > buff.length);
+	return buff[0 .. needed];
+}
+
+
 // WinAPI
 // --------------------------------------------------
 
@@ -496,4 +524,11 @@ extern(Windows) nothrow
 
 	pragma(lib, "psapi.lib");
 	extern BOOL EnumProcesses(DWORD *pProcessIds, DWORD cb, DWORD *pBytesReturned);
+
+	extern BOOL EnumProcessModules(
+		HANDLE hProcess,
+		HMODULE *lphModule,
+		DWORD cb,
+		LPDWORD lpcbNeeded
+	);
 }
