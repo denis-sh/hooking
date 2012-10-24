@@ -34,14 +34,7 @@ struct Heap
 
 	T[] alloc(T = void)(size_t count, DWORD flags = 0)
 	{
-		static if(T.sizeof == 1)
-			alias count bytes;
-		else
-		{
-			immutable size_t bytes = count * T.sizeof;
-			enforce(bytes / T.sizeof == count);
-		}
-		return enforce(cast(T*) HeapAlloc(_handle, flags, bytes))[0 .. count];
+		return enforce(cast(T*) HeapAlloc(_handle, flags, countToBytes(T.sizeof, count)))[0 .. count];
 	}
 
 	void free(void* p, DWORD flags = 0)
@@ -53,6 +46,13 @@ struct Heap
 			res = cast(ubyte) res;
 		enforce(res);
 	}
+}
+
+private size_t countToBytes(size_t elementSize, size_t count)
+{
+	immutable size_t bytes = count * elementSize;
+	enforce(bytes / elementSize == count);
+	return bytes;
 }
 
 
