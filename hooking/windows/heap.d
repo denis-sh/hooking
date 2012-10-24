@@ -58,6 +58,29 @@ private size_t countToBytes(size_t elementSize, size_t count)
 
 // WinAPI
 // --------------------------------------------------
+enum : DWORD
+{
+	HEAP_NO_SERIALIZE              = 0x00000001,
+	HEAP_GROWABLE                  = 0x00000002,
+	HEAP_GENERATE_EXCEPTIONS       = 0x00000004,
+	HEAP_ZERO_MEMORY               = 0x00000008,
+	HEAP_REALLOC_IN_PLACE_ONLY     = 0x00000010,
+	HEAP_TAIL_CHECKING_ENABLED     = 0x00000020,
+	HEAP_FREE_CHECKING_ENABLED     = 0x00000040,
+	HEAP_DISABLE_COALESCE_ON_FREE  = 0x00000080,
+	HEAP_CREATE_ALIGN_16           = 0x00010000,
+	HEAP_CREATE_ENABLE_TRACING     = 0x00020000,
+	HEAP_CREATE_ENABLE_EXECUTE     = 0x00040000,
+	HEAP_MAXIMUM_TAG               = 0x0FFF,
+	HEAP_PSEUDO_TAG_FLAG           = 0x8000,
+	HEAP_TAG_SHIFT                 = 18,
+}
+
+DWORD HEAP_MAKE_TAG_FLAGS(DWORD TagBase, DWORD Tag) @safe pure nothrow
+{
+    return cast(DWORD)(TagBase + (Tag << HEAP_TAG_SHIFT));
+}
+
 
 extern(Windows) nothrow
 {
