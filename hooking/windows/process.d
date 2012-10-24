@@ -442,21 +442,21 @@ void[] helperNtQuerySystemInformation(SYSTEM_INFORMATION_CLASS SystemInformation
 	auto buff = processHeap.alloc(initialBufferSize);
 	for(;;)
 	{
-		DWORD bytesReturned = -1;
+		DWORD needed = -1;
 		NTSTATUS res = NtQuerySystemInformation(SystemInformationClass,
-			buff.ptr, buff.length, &bytesReturned);
+			buff.ptr, buff.length, &needed);
 		if(res != STATUS_INFO_LENGTH_MISMATCH)
 		{
 			scope(failure) processHeap.free(buff.ptr);
 			enforce(res >= 0);
-			assert(bytesReturned <= buff.length);
-			buff.length = bytesReturned;
+			assert(needed <= buff.length);
+			buff.length = needed;
 			break;
 		}
 		processHeap.free(buff.ptr);
 		// Possible integer overflow will not lead to memory corruption.
 		// And Windows definitely will not support such amount of processes/threads.
-		buff = processHeap.alloc(max(bytesReturned + 0x2000, buff.length * 2));
+		buff = processHeap.alloc(max(needed + 0x2000, buff.length * 2));
 	}
 	return buff;
 }
