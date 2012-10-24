@@ -37,6 +37,11 @@ struct Heap
 		return enforce(cast(T*) HeapAlloc(_handle, flags, countToBytes(T.sizeof, count)))[0 .. count];
 	}
 
+	void realloc(T)(ref T[] array, size_t newCount, DWORD flags = 0)
+	{
+		array = enforce(cast(T*) HeapReAlloc(_handle, flags, array.ptr, countToBytes(T.sizeof, newCount)))[0 .. newCount];
+	}
+
 	void free(void* p, DWORD flags = 0)
 	{
 		BOOL res = HeapFree(_handle, flags, p);
@@ -86,5 +91,6 @@ extern(Windows) nothrow
 {
 	extern HANDLE GetProcessHeap();
 	extern PVOID HeapAlloc (HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes);
-	extern BOOL HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
+	extern PVOID HeapReAlloc (HANDLE hHeap, DWORD dwFlags, LPVOID lpMem, SIZE_T dwBytes);
+	extern BOOL HeapFree (HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
 }
