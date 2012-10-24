@@ -447,16 +447,12 @@ void[] helperNtQuerySystemInformation(SYSTEM_INFORMATION_CLASS SystemInformation
 		{
 			scope(failure) processHeap.free(buff.ptr);
 			enforce(res >= 0);
-			assert(needed <= buff.length);
-			buff.length = needed;
-			break;
+			return buff[0 .. needed];
 		}
-		processHeap.free(buff.ptr);
 		// Possible integer overflow will not lead to memory corruption.
 		// And Windows definitely will not support such amount of processes/threads.
-		buff = processHeap.alloc(max(needed + 0x2000, buff.length * 2));
+		processHeap.destructiveRealloc(buff, max(needed + 0x2000, buff.length * 2));
 	}
-	return buff;
 }
 
 
