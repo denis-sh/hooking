@@ -85,6 +85,6 @@ DWORD HEAP_MAKE_TAG_FLAGS(DWORD TagBase, DWORD Tag) @safe pure nothrow
 extern(Windows) nothrow
 {
 	extern HANDLE GetProcessHeap();
-	extern PVOID HeapAlloc(PVOID HeapHandle, ULONG Flags, SIZE_T Size);
+	extern PVOID HeapAlloc (HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes);
 	extern BOOL HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
 }
