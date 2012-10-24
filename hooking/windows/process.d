@@ -232,8 +232,6 @@ struct Process
 			enforce(sysProcessInfo.NextEntryOffset, "Process has exited.");
 			offset += sysProcessInfo.NextEntryOffset;
 		}
-
-		assert(0);
 	}
 
 	void loadDll(string dllName)
