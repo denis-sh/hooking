@@ -206,7 +206,7 @@ struct Process
 		return buff.dup;
 	}
 
-	@property DWORD[] getThreadIds()
+	DWORD[] getThreadIds()
 	{
 		auto NtQuerySystemInformation = cast(NtQuerySystemInformation)
 			enforce(GetProcAddress(LoadLibraryA("ntdll"), "NtQuerySystemInformation"));
