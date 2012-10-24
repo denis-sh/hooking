@@ -208,28 +208,7 @@ struct Process
 
 	DWORD[] getThreadIds()
 	{
-		auto NtQuerySystemInformation = cast(NtQuerySystemInformation)
-			enforce(GetProcAddress(LoadLibraryA("ntdll"), "NtQuerySystemInformation"));
-
-		auto buff = processHeap.alloc(0x20000);
-		for(;;)
-		{
-			DWORD bytesReturned = -1;
-			NTSTATUS res = NtQuerySystemInformation(SYSTEM_INFORMATION_CLASS.SystemProcessInformation,
-				buff.ptr, buff.length, &bytesReturned);
-			if(res != STATUS_INFO_LENGTH_MISMATCH)
-			{
-				scope(failure) processHeap.free(buff.ptr);
-				enforce(res >= 0);
-				assert(bytesReturned <= buff.length);
-				buff.length = bytesReturned;
-				break;
-			}
-			processHeap.free(buff.ptr);
-			// Possible integer overflow will not lead to memory corruption.
-			// And Windows definitely will not support such amount of processes/threads.
-			buff = processHeap.alloc(max(bytesReturned + 0x2000, buff.length * 2));
-		}
+		auto buff = helperNtQuerySystemInformation(SYSTEM_INFORMATION_CLASS.SystemProcessInformation, 0x20000);
 		scope(exit) processHeap.free(buff.ptr);
 
 		size_t offset = 0;
@@ -453,6 +432,33 @@ HMODULE[] helperEnumProcessModules(HANDLE hProcess)
 	}
 	while(needed > buff.length);
 	return buff[0 .. needed];
+}
+
+void[] helperNtQuerySystemInformation(SYSTEM_INFORMATION_CLASS SystemInformationClass, size_t initialBufferSize)
+{
+	auto NtQuerySystemInformation = cast(NtQuerySystemInformation)
+		enforce(GetProcAddress(LoadLibraryA("ntdll"), "NtQuerySystemInformation"));
+
+	auto buff = processHeap.alloc(initialBufferSize);
+	for(;;)
+	{
+		DWORD bytesReturned = -1;
+		NTSTATUS res = NtQuerySystemInformation(SystemInformationClass,
+			buff.ptr, buff.length, &bytesReturned);
+		if(res != STATUS_INFO_LENGTH_MISMATCH)
+		{
+			scope(failure) processHeap.free(buff.ptr);
+			enforce(res >= 0);
+			assert(bytesReturned <= buff.length);
+			buff.length = bytesReturned;
+			break;
+		}
+		processHeap.free(buff.ptr);
+		// Possible integer overflow will not lead to memory corruption.
+		// And Windows definitely will not support such amount of processes/threads.
+		buff = processHeap.alloc(max(bytesReturned + 0x2000, buff.length * 2));
+	}
+	return buff;
 }
 
 
