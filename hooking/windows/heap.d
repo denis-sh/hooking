@@ -42,6 +42,20 @@ struct Heap
 		array = enforce(cast(T*) HeapReAlloc(_handle, flags, array.ptr, countToBytes(T.sizeof, newCount)))[0 .. newCount];
 	}
 
+	void destructiveRealloc(T)(ref T[] array, size_t newCount)
+	{
+		immutable size_t newBytes = countToBytes(T.sizeof, newCount);
+		if(HeapReAlloc(_handle, HEAP_REALLOC_IN_PLACE_ONLY, array.ptr, newBytes))
+			array = array.ptr[0 .. newCount];
+		else
+		{
+			auto res = enforce(cast(T*) HeapAlloc(_handle, 0, newBytes))[0 .. newCount];
+			scope(failure) free(res.ptr);
+			free(array.ptr);
+			array = res;
+		}
+	}
+
 	void free(void* p, DWORD flags = 0)
 	{
 		BOOL res = HeapFree(_handle, flags, p);
