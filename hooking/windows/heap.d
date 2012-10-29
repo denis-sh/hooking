@@ -18,7 +18,7 @@ import std.exception;
 
 /// Returns default heap of the calling process.
 @property Heap processHeap()
-{ return Heap(GetProcessHeap()); }
+{ return Heap(enforce(GetProcessHeap())); }
 
 
 /// This struct encapsulates heap manipulation functionality.
