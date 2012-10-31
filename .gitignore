@@ -1,5 +1,6 @@
 /Release
 /Debug
+/Unittest
 *.suo
 *.dll
 *.lib
