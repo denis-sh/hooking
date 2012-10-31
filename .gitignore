@@ -1,5 +1,5 @@
-Release
-Debug
+/Release
+/Debug
 *.suo
 *.dll
 *.lib
