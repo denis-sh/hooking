@@ -38,10 +38,16 @@ unittest
 { return Heap(enforce(GetProcessHeap())); }
 
 
-/// This struct encapsulates heap manipulation functionality.
+/** This struct encapsulates heap manipulation functionality.
+
+Mostly it is a convinient wrapper for
+$(HTTP msdn.microsoft.com/en-us/library/windows/desktop/aa366711(v=vs.85).aspx,
+WinAPI heap functions).
+*/
 struct Heap
 {
 	private HANDLE _handle;
+
 
 	invariant()
 	{ assert(this.associated, "Attempting to use unassociated Heap struct"); }
@@ -53,14 +59,38 @@ struct Heap
 		_handle = heapHandle;
 	}
 
+
+	/// Gets the _handle of the associated process. 
 	@property HANDLE handle()
 	{ return _handle; }
 
+
+	/** Allocates a block of memory.
+
+	Also see
+	$(HTTP msdn.microsoft.com/en-us/library/windows/desktop/aa366597(v=vs.85).aspx,
+	HeapAlloc).
+
+	Throws:
+	$(D Exception) if memory allocation failed.
+	*/
 	T[] alloc(T = void)(size_t count, DWORD flags = 0)
 	{
 		return enforce(cast(T*) HeapAlloc(_handle, flags, countToBytes(T.sizeof, count)))[0 .. count];
 	}
 
+
+	/** Reallocates a block of memory (i.e. memory content is preserved).
+
+	If $(D array) is $(D null), works as $(D alloc).
+
+	See also
+	$(HTTP msdn.microsoft.com/en-us/library/windows/desktop/aa366704(v=vs.85).aspx,
+	HeapReAlloc).
+
+	Throws:
+	$(D Exception) if memory reallocation failed.
+	*/
 	void realloc(T)(ref T[] array, size_t newCount, DWORD flags = 0)
 	{
 		array = array ?
@@ -68,6 +98,35 @@ struct Heap
 			: alloc!T(newCount);
 	}
 
+
+	/** Reallocates a block of memory without preserving its content.
+
+	If $(D array) is $(D null), works as $(D alloc).
+	Destructive reallocation is often needed when dealing with functions
+	requiring unpredictable buffer size. See example.
+
+	Throws:
+	$(D Exception) if memory reallocation failed.
+
+	Example:
+	---
+	HMODULE[] enumProcessModulesHelper(HANDLE hProcess)
+	{
+		HMODULE[] buff;
+		DWORD needed = 0;
+		do
+		{
+			processHeap.destructiveRealloc!HMODULE(buff, max(needed + 0x100, buff.length * 2));
+			scope(failure) processHeap.free(buff.ptr);
+			enforce(EnumProcessModules(hProcess, buff.ptr, buff.length * HMODULE.sizeof, &needed));
+			assert(needed % HMODULE.sizeof == 0);
+			needed /= HMODULE.sizeof;
+		}
+		while(needed > buff.length);
+		return buff[0 .. needed];
+	}
+	---
+	*/
 	void destructiveRealloc(T)(ref T[] array, size_t newCount)
 	{
 		immutable size_t newBytes = countToBytes(T.sizeof, newCount);
@@ -84,6 +143,16 @@ struct Heap
 		}
 	}
 
+
+	/** Frees a block of memory.
+
+	See also
+	$(HTTP msdn.microsoft.com/en-us/library/windows/desktop/aa366701(v=vs.85).aspx,
+	HeapFree).
+
+	Throws:
+	$(D Exception) if memory freeing failed.
+	*/
 	void free(void* p, DWORD flags = 0)
 	{
 		BOOL res = HeapFree(_handle, flags, p);
