@@ -44,11 +44,18 @@ unittest
 */
 struct ProcessMemory
 {
+	/// Gets a $(D ProcessMemory) with associated with current processes.
 	@property static ProcessMemory current()
 	{ return ProcessMemory(GetCurrentProcess()); }
 
+	unittest
+	{
+		auto current = ProcessMemory.current;
+	}
+
 
 	private HANDLE _processHandle;
+
 
 	invariant()
 	{ assert(this.associated, "Attempting to use unassociated ProcessMemory struct"); }
@@ -56,16 +63,25 @@ struct ProcessMemory
 
 	@disable this();
 
+
+	/// Construct a $(D ProcessMemory) from a $(D processHandle).
 	this(HANDLE processHandle)
 	{
 		this._processHandle = processHandle;
 	}
 
 
+	/// Gets the handle of the associated process. 
 	@property HANDLE processHandle()
 	{ return _processHandle; }
 
-	/// Returns previous access protection of the first page in the specified region
+
+	/** Set access protection of the specified memory region to $(D newProtection).
+	Returns previous protection of the first page in the specified region.
+	
+	Preconditions:
+	$(D newProtection) is a valid memory protection.
+	*/
 	DWORD changeProtection(RemoteAddress address, size_t size, DWORD newProtection)
 	in { assert(isValidMemoryProtection(newProtection)); }
 	body
@@ -75,11 +91,66 @@ struct ProcessMemory
 		return oldProtection;
 	}
 
+
+	/** Reads $(D buff.length) bytes of memory starting with $(D baseAddress) into $(D buff).
+
+	Preconditions:
+	$(D buff) isn't empty.
+
+	Throws:
+	$(D Exception) if requested memory region isn't available for reading.
+
+	Example:
+	---
+	uint[1] buff;
+	
+	uint a = 7;
+	current.read(cast(RemoteAddress) &a, buff);
+	assert(buff[0] == 7);
+
+	import std.exception: assertThrown;
+	assertThrown(ProcessMemory.current.read(0, buff));
+	---
+	*/
 	void read(RemoteAddress baseAddress, void[] buff)
+	in { assert(buff.length); }
+	body
 	{
 		enforce(ReadProcessMemory(_processHandle, cast(LPCVOID) baseAddress, buff.ptr, buff.length, null));
 	}
 
+	unittest
+	{
+		ubyte[1] buff;
+		assertThrown(current.read(0, buff));
+		assertThrown(current.read(size_t.max, buff));
+
+		uint[2] a = [7, 8], b;
+		current.read(cast(RemoteAddress) a.ptr, b);
+		assert(b == [7, 8]);
+
+		uint i;
+		current.read(cast(RemoteAddress) a.ptr, (&i)[0 .. 1]);
+		assert(i == 7);
+	}
+
+
+	/** Reads $(D T.sizeof) bytes of memory starting with $(D baseAddress)
+	and returns it as $(D T).
+
+	Throws:
+	$(D Exception) if requested memory region isn't available for reading.
+
+	Example:
+	---
+	uint a = 7;
+	assert(current.get!uint(cast(RemoteAddress) &a) == 7);
+	assert(current.get!(char[2])(cast(RemoteAddress) "ab".ptr) == "ab");
+
+	import std.exception: assertThrown;
+	assertThrown(current.get!ubyte(0));
+	---
+	*/
 	T get(T)(RemoteAddress baseAddress)
 	{
 		T res = void;
@@ -87,11 +158,53 @@ struct ProcessMemory
 		return res;
 	}
 
+	unittest
+	{
+		assertThrown(current.get!ubyte(0));
+		assertThrown(current.get!ubyte(size_t.max));
+
+		uint a = 7;
+		assert(current.get!uint(cast(RemoteAddress) &a) == 7);
+		assert(current.get!(char[2])(cast(RemoteAddress) "ab".ptr) == "ab");
+	}
+
+
+	/** Writes $(D T.sizeof) bytes of memory starting with $(D baseAddress)
+	and returns it as $(D T).
+
+	Preconditions:
+	$(D buff) isn't empty.
+
+	Throws:
+	$(D Exception) if requested memory region isn't available for writing.
+
+	Example:
+	---
+	uint[3] a = [7, 8, 9];
+	current.write(cast(RemoteAddress) &a[1], [10]);
+	assert(a == [7, 10, 9]);
+
+	import std.exception: assertThrown;
+	assertThrown(current.write(0, [0]));
+	---
+	*/
 	void write(RemoteAddress baseAddress, in void[] buff, bool flushInstructionCache = false)
+	in { assert(buff.length); }
+	body
 	{
 		enforce(WriteProcessMemory(_processHandle, cast(LPVOID) baseAddress, buff.ptr, buff.length, null));
 		if(flushInstructionCache)
 			enforce(FlushInstructionCache(_processHandle, cast(LPVOID) baseAddress, buff.length));
+	}
+
+	unittest
+	{
+		assertThrown(current.write(0, [0]));
+		assertThrown(current.write(size_t.max, [0]));
+
+		uint[3] a = [7, 8, 9];
+		current.write(cast(RemoteAddress) &a[1], [10]);
+		assert(a == [7, 10, 9]);
 	}
 }
 
