@@ -46,6 +46,13 @@ struct Heap
 	invariant()
 	{ assert(this.associated, "Attempting to use unassociated Heap struct"); }
 
+
+	/// Construct a $(D Heap) from a $(D heapHandle).
+	this(HANDLE heapHandle)
+	{
+		_handle = heapHandle;
+	}
+
 	@property HANDLE handle()
 	{ return _handle; }
 
