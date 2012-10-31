@@ -12,8 +12,23 @@ import hooking.windows.c.winternl;
 import core.sys.windows.windows;
 import std.exception;
 
+/** Returns whether $(D thread) is accosiated with a thread.
+It is asserted that no member functions are called for an unassociated
+$(D Thread) struct.
+
+Example:
+---
+assert(!Thread.init.associated);
+auto h = Thread.init.handle; // assert violation
+---
+*/
 @property bool associated(in Thread thread) @safe pure nothrow
 { return thread._handle || thread._threadId; }
+
+unittest
+{
+	assert(!Thread.init.associated);
+}
 
 
 struct Thread

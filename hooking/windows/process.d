@@ -19,8 +19,28 @@ import hooking.windows.thread;
 import hooking.windows.processmemory;
 
 
+/** Returns whether $(D process) is accosiated with a process.
+It is asserted that no member functions are called for an unassociated
+$(D Process) struct.
+
+Example:
+---
+assert(Process.currentLocal.associated);
+assert(!Process.init.associated);
+auto h = Process.init.handle; // assert violation
+---
+
+Bugs:
+The check is implemented as $(D Process) invariant and disabled because of $(BUGZILLA 7892).
+*/
 @property bool associated(in Process process) @safe pure nothrow
 { return process._handle || process._processId; }
+
+unittest
+{
+	assert(Process.currentLocal.associated);
+	assert(!Process.init.associated);
+}
 
 
 /** This struct encapsulates process hooking functionality.

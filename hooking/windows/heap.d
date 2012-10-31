@@ -12,8 +12,25 @@ import core.sys.windows.windows;
 import std.exception;
 
 
+/** Returns whether $(D heap) is accosiated with a heap handle.
+It is asserted that no member functions are called for an unassociated
+$(D Heap) struct.
+
+Example:
+---
+assert(processHeap.associated);
+assert(!Heap.init.associated);
+auto h = Heap.init.handle; // assert violation
+---
+*/
 @property bool associated(in Heap heap) @safe pure nothrow
 { return !!heap._handle; }
+
+unittest
+{
+	static assert(!Heap.init.associated);
+	assert(processHeap.associated);
+}
 
 
 /// Returns default heap of the calling process.

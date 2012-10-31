@@ -19,8 +19,25 @@ static assert(size_t.sizeof == 4);
 
 alias size_t RemoteAddress;
 
+/** Returns whether $(D memory) is accosiated with a process handle.
+It is asserted that no member functions are called for an unassociated
+$(D ProcessMemory) struct.
+
+Example:
+---
+assert(ProcessMemory.current.associated);
+assert(!ProcessMemory.init.associated);
+auto h = ProcessMemory.init.processHandle; // assert violation
+---
+*/
 @property bool associated(in ProcessMemory memory) @safe pure nothrow
 { return !!memory._processHandle; }
+
+unittest
+{
+	assert(ProcessMemory.current.associated);
+	assert(!ProcessMemory.init.associated);
+}
 
 
 /** This struct encapsulates process memory manipulation functionality.
