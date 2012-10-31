@@ -148,11 +148,87 @@ It is asserted that no member functions are called for an unassociated
 </div>
 <hr><div class="row-fluid declaration"><h3>struct <a class="symbol symbol-anchor" name="Heap" href="#Heap">Heap</a>;
 </h3></div>
-<div class="declaration-content"><dl><p>This struct encapsulates heap manipulation functionality.</p>
+<div class="declaration-content"><dl><p>This struct encapsulates heap manipulation functionality.
+</p>
+<p>Mostly it is a convinient wrapper for
+<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/aa366711(v=vs.85).aspx">WinAPI heap functions</a>.</p>
 </dl>
 <div class="offset1 member-list"><hr><div class="row-fluid declaration"><h3>this(void* <i>heapHandle</i>);
 </h3></div>
 <div class="declaration-content"><dl><p>Construct a <span class="inlinecode">Heap</span> from a <span class="inlinecode"><i>heapHandle</i></span>.</p>
+</dl>
+</div>
+<hr><div class="row-fluid declaration"><h3>@property HANDLE <a class="symbol symbol-anchor" name="handle" href="#handle">handle</a>();
+</h3></div>
+<div class="declaration-content"><dl><p>Gets the handle of the associated process. </p>
+</dl>
+</div>
+<hr><div class="row-fluid declaration"><h3>T[] <a class="symbol symbol-anchor" name="alloc" href="#alloc">alloc</a>(T = void)(size_t <i>count</i>, DWORD <i>flags</i> = 0);
+</h3></div>
+<div class="declaration-content"><dl><p>Allocates a block of memory.
+</p>
+<p>Also see
+	<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/aa366597(v=vs.85).aspx">	HeapAlloc</a>.
+
+</p>
+<dt>Throws</dt><dd><span class="inlinecode">Exception</span> if memory allocation failed.</dd>
+</dl>
+</div>
+<hr><div class="row-fluid declaration"><h3>void <a class="symbol symbol-anchor" name="realloc" href="#realloc">realloc</a>(T)(ref T[] <i>array</i>, size_t <i>newCount</i>, DWORD <i>flags</i> = 0);
+</h3></div>
+<div class="declaration-content"><dl><p>Reallocates a block of memory (i.e. memory content is preserved).
+</p>
+<p>If <span class="inlinecode">array</span> is <span class="inlinecode"><span class="d_keyword">null</span></span>, works as <span class="inlinecode">alloc</span>.
+<br><br>
+
+	See also
+	<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/aa366704(v=vs.85).aspx">	HeapReAlloc</a>.
+
+</p>
+<dt>Throws</dt><dd><span class="inlinecode">Exception</span> if memory reallocation failed.</dd>
+</dl>
+</div>
+<hr><div class="row-fluid declaration"><h3>void <a class="symbol symbol-anchor" name="destructiveRealloc" href="#destructiveRealloc">destructiveRealloc</a>(T)(ref T[] <i>array</i>, size_t <i>newCount</i>);
+</h3></div>
+<div class="declaration-content"><dl><p>Reallocates a block of memory without preserving its content.
+</p>
+<p>If <span class="inlinecode">array</span> is <span class="inlinecode"><span class="d_keyword">null</span></span>, works as <span class="inlinecode">alloc</span>.
+	Destructive reallocation is often needed when dealing with functions
+	requiring unpredictable buffer size. See example.
+
+</p>
+<dt>Throws</dt><dd><span class="inlinecode">Exception</span> if memory reallocation failed.
+
+</dd>
+<dt>Example:</dt><dd>
+<pre class="d_code">	HMODULE[] enumProcessModulesHelper(HANDLE hProcess)
+	{
+		HMODULE[] buff;
+		DWORD needed = 0;
+		<span class="d_keyword">do</span>
+		{
+			processHeap.<u>destructiveRealloc</u>!HMODULE(buff, max(needed + 0x100, buff.length * 2));
+			<span class="d_keyword">scope</span>(failure) processHeap.free(buff.ptr);
+			enforce(EnumProcessModules(hProcess, buff.ptr, buff.length * HMODULE.sizeof, &amp;needed));
+			<span class="d_keyword">assert</span>(needed % HMODULE.sizeof == 0);
+			needed /= HMODULE.sizeof;
+		}
+		<span class="d_keyword">while</span>(needed &gt; buff.length);
+		<span class="d_keyword">return</span> buff[0 .. needed];
+	}
+</pre>
+</dd>
+</dl>
+</div>
+<hr><div class="row-fluid declaration"><h3>void <a class="symbol symbol-anchor" name="free" href="#free">free</a>(void* <i>p</i>, DWORD <i>flags</i> = 0);
+</h3></div>
+<div class="declaration-content"><dl><p>Frees a block of memory.
+</p>
+<p>See also
+	<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/aa366701(v=vs.85).aspx">	HeapFree</a>.
+
+</p>
+<dt>Throws</dt><dd><span class="inlinecode">Exception</span> if memory freeing failed.</dd>
 </dl>
 </div>
 </div>

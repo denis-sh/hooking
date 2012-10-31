@@ -140,6 +140,82 @@ It is asserted that no member functions are called for an unassociated
 </dd>
 </dl>
 </div>
+<hr><div class="row-fluid declaration"><h3>struct <a class="symbol symbol-anchor" name="Thread" href="#Thread">Thread</a>;
+</h3></div>
+<div class="declaration-content"><dl><p>This struct encapsulates thread manipulation functionality.</p>
+</dl>
+<div class="offset1 member-list"><hr><div class="row-fluid declaration"><h3>this(void* <i>threadHandle</i>);
+</h3></div>
+<div class="declaration-content"><dl><p>Construct a <span class="inlinecode">Thread</span> from a <span class="inlinecode"><i>threadHandle</i></span>.</p>
+</dl>
+</div>
+<hr><div class="row-fluid declaration"><h3>@property HANDLE <a class="symbol symbol-anchor" name="handle" href="#handle">handle</a>();
+</h3></div>
+<div class="declaration-content"><dl><p>Gets the native handle.</p>
+</dl>
+</div>
+<hr><div class="row-fluid declaration"><h3>const @property DWORD <a class="symbol symbol-anchor" name="threadId" href="#threadId">threadId</a>();
+</h3></div>
+<div class="declaration-content"><dl><p>Gets the thread identifier.</p>
+</dl>
+</div>
+<hr><div class="row-fluid declaration"><h3>@property DWORD <a class="symbol symbol-anchor" name="ownerProcessId" href="#ownerProcessId">ownerProcessId</a>();
+</h3></div>
+<div class="declaration-content"><dl><p>Gets the process identifier of the owner process.</p>
+</dl>
+</div>
+<hr><div class="row-fluid declaration"><h3>void <a class="symbol symbol-anchor" name="suspend" href="#suspend">suspend</a>();
+</h3></div>
+<div class="declaration-content"><dl><p>Suspends thread.
+</p>
+<p>Calls
+	<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms686345(v=vs.85).aspx">	SuspendThread</a>.</p>
+</dl>
+</div>
+<hr><div class="row-fluid declaration"><h3>void <a class="symbol symbol-anchor" name="resume" href="#resume">resume</a>();
+</h3></div>
+<div class="declaration-content"><dl><p>Resumes thread.
+</p>
+<p>Calls
+	<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms685086(v=vs.85).aspx">	ResumeThread</a>.</p>
+</dl>
+</div>
+<hr><div class="row-fluid declaration"><h3>void <a class="symbol symbol-anchor" name="executeUntil" href="#executeUntil">executeUntil</a>(size_t <i>address</i>);
+</h3></div>
+<div class="declaration-content"><dl><p>Waits for thread's EIP to be fixed on <span class="inlinecode"><i>address</i></span> (e.g. because of a `JMP $-2;` loop).
+</p>
+<p>It will resume the thread if it is suspended and then increase suspended count with the same value.</p>
+</dl>
+</div>
+<hr><div class="row-fluid declaration"><h3>CONTEXT <a class="symbol symbol-anchor" name="getContext" href="#getContext">getContext</a>(DWORD <i>flags</i>);
+</h3></div>
+<div class="declaration-content"><dl><p>Gets thread context.
+</p>
+<p>Calls
+	<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms679362(v=vs.85).aspx">	GetThreadContext</a>.</p>
+</dl>
+</div>
+<hr><div class="row-fluid declaration"><h3>void <a class="symbol symbol-anchor" name="setContext" href="#setContext">setContext</a>(CONTEXT <i>context</i>);
+</h3></div>
+<div class="declaration-content"><dl><p>Sets thread <i>context</i>.
+</p>
+<p>Calls
+	<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms680632(v=vs.85).aspx">	SetThreadContext</a>.</p>
+</dl>
+</div>
+<hr><div class="row-fluid declaration"><h3>void <a class="symbol symbol-anchor" name="changeContext" href="#changeContext">changeContext</a>(DWORD <i>getFlags</i>, scope void delegate(ref CONTEXT) <i>del</i>);
+</h3></div>
+<div class="declaration-content"><dl><p>Convenient function for changing thread context.</p>
+</dl>
+</div>
+</div>
+</div>
+<hr><div class="row-fluid declaration"><h3>void <a class="symbol symbol-anchor" name="closeHandle" href="#closeHandle">closeHandle</a>(ref Thread <i>thread</i>);
+</h3></div>
+<div class="declaration-content"><dl><p>Closes <span class="inlinecode"><i>thread</i></span> handle if any.
+<span class="inlinecode"><i>thread</i></span> may be unassociated.</p>
+</dl>
+</div>
 
 
 				</div>
