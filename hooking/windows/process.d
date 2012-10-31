@@ -291,6 +291,11 @@ struct Process
 		primaryThread.resume();
 	}
 
+	void terminate()
+	{
+		enforce(TerminateProcess(_handle, -1));
+	}
+
 	int waitForExit()
 	{
 		WaitForSingleObject(_handle, INFINITE);
@@ -549,5 +554,10 @@ extern(Windows) nothrow
 		HMODULE *lphModule,
 		DWORD cb,
 		LPDWORD lpcbNeeded
+	);
+
+	extern BOOL TerminateProcess(
+		HANDLE hProcess,
+		UINT uExitCode
 	);
 }
