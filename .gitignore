@@ -1,6 +1,7 @@
 /Release
 /Debug
 /Unittest
+/.generated-docs
 *.suo
 *.dll
 *.lib

@@ -1,0 +1,5 @@
+MODULES =
+	$(MODULE hooking.windows.heap)
+	$(MODULE hooking.windows.thread)
+	$(MODULE hooking.windows.processmemory)
+	$(MODULE hooking.windows.process)

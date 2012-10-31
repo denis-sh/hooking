@@ -1,0 +1,12 @@
+PROJECTNAME = Hooking Project
+REFERENCETOP = index.html
+REPOSRCTREE = http://github.com/denis-sh/hooking/tree/master
+TITLEBARTEXT = <a href="https://github.com/denis-sh/hooking">Github Page</a>
+RESOURCEROOT = bootDoc/
+PACKAGESEP = .
+FAVICON = $(RESOURCEROOT)assets/ico/favicon.ico
+LOGOSRC = $(RESOURCEROOT)assets/img/icon-github.png
+LOGOALT = $(PROJECTNAME)
+LOGOLINK = $(REFERENCETOP)
+COPYRIGHT = Denis Shelomovskij
+COPYRIGHTFOOTER = &copy; $(COPYRIGHT) 2012-$(YEAR)
