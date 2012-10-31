@@ -9,6 +9,7 @@ Authors: Denis Shelomovskij
 module hooking.windows.process;
 
 import core.sys.windows.windows;
+import core.time;
 import std.utf;
 import std.exception;
 import std.algorithm: max;
@@ -415,16 +416,21 @@ struct Process
 		primaryThread.resume();
 	}
 
-	/// Terminates the process.
-	void terminate()
+	/** Terminates the process and set its exit code with $(D exitCode).
+
+	Calls
+	$(HTTP msdn.microsoft.com/en-us/library/windows/desktop/ms686714(v=vs.85).aspx,
+	TerminateProcess).
+	*/
+	void terminate(uint exitCode = -1)
 	{
-		enforce(TerminateProcess(_handle, -1));
+		enforce(TerminateProcess(_handle, exitCode));
 	}
 
-	/// Waits for the process to exit.
+	/// Waits for the process to exit and returns exit code.
 	int waitForExit()
 	{
-		WaitForSingleObject(_handle, INFINITE);
+		enforce(WaitForSingleObject(_handle, INFINITE) == WAIT_OBJECT_0);
 		DWORD exitCode;
 		enforce(GetExitCodeProcess(_handle, &exitCode));
 		// Note: If the process returned STILL_ACTIVE(259) we do not care
@@ -436,8 +442,59 @@ struct Process
 		auto p = testLaunch();
 		scope(exit) p.closeHandles();
 
-		p.terminate();
-		assert(p.waitForExit() == -1);
+		p.terminate(-3);
+		assert(p.waitForExit() == -3);
+	}
+
+
+	/** Waits the specified $(D duration) for the process to exit
+	and returns wheter it exited. If it does exited, set $(D exitCode)
+	with the process exit code.
+
+	Bugs:
+	If total milliseconds in duration >= $(D uint.max) (more than 49 days)
+	it will wait infinite time (i.e. equals to $(D waitForExit())).
+	*/ 
+	bool waitForExit(Duration duration, out uint exitCode)
+	{
+		immutable ulong msecs = duration.total!"msecs"();
+		static assert(INFINITE == uint.max);
+		if(msecs >= uint.max)
+		{
+			exitCode = waitForExit();
+			return true;
+		}
+
+		immutable DWORD waitRes = WaitForSingleObject(_handle, cast(uint) msecs);
+		if(waitRes == WAIT_TIMEOUT)
+			return false;
+		enforce(waitRes == WAIT_OBJECT_0);
+
+		enforce(GetExitCodeProcess(_handle, &exitCode));
+		// Note: If the process returned STILL_ACTIVE(259) we do not care
+		return true;
+	}
+
+	/// ditto
+	bool waitForExit(Duration duration)
+	{
+		uint exitCode;
+		return waitForExit(duration, exitCode);
+	}
+
+	unittest
+	{
+		auto p = testLaunch();
+		scope(exit) p.closeHandles();
+		uint exitCode;
+
+		assert(!p.waitForExit(dur!"msecs"(1), exitCode) && exitCode == 0);
+
+		p.terminate(-2);
+		while(!p.waitForExit(dur!"msecs"(0), exitCode)) { }
+		assert(exitCode == -2);
+		assert(p.waitForExit(dur!"msecs"( 1), exitCode) && exitCode == -2);
+		assert(p.waitForExit(dur!"days" (50), exitCode) && exitCode == -2);
 	}
 }
 
