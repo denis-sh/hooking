@@ -203,7 +203,7 @@ struct Process
 	}
 
 
-	/// Gets the native handle.
+	/// Gets the native _handle.
 	@property HANDLE handle()
 	{ return _handle; }
 
