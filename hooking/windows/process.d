@@ -43,6 +43,13 @@ unittest
 }
 
 
+version(unittest) Process testLaunch()
+{
+	import std.process;
+	return Process(environment["windir"] ~ `\system32\notepad.exe`, null, true);
+}
+
+
 /** This struct encapsulates process hooking functionality.
 */
 struct Process
@@ -54,12 +61,24 @@ struct Process
 	@property static Process currentLocal()
 	{ return Process(GetCurrentProcess(), PROCESS_ALL_ACCESS, true); }
 
+	unittest
+	{
+		auto local = Process.currentLocal;
+		local.closeHandles();
+	}
+
 
 	/** Returns a $(D Process) with "real" handle of current processes
 	that is valid in the context of other processes.
 	*/
 	static Process getCurrentGlobal()
 	{ return Process(GetCurrentProcessId(), PROCESS_ALL_ACCESS, false); }
+
+	unittest
+	{
+		auto global = Process.getCurrentGlobal();
+		global.closeHandles();
+	}
 
 
 	/** Returns process identifiers of all running processes.
@@ -183,22 +202,66 @@ struct Process
 	}
 
 
+	/// Gets the native handle.
 	@property HANDLE handle()
 	{ return _handle; }
 
+
+	/// Gets access to the $(D handle).
 	@property DWORD handleAccess() const
 	{ return _handleAccess; }
 
+
+	/// Gets the process identifier.
 	@property DWORD processId() const
 	{ return _processId; }
 
+
+	/** Gets the primary thread.
+
+	Preconditions:
+	The process is created with a constructor launching an executable file.
+	*/
 	@property Thread primaryThread()
 	in { assert(_primaryThread._handle); }
 	body { return _primaryThread; }
 
+
+	/// Gets associated $(D ProcessMemory) instance.
 	@property ProcessMemory memory()
 	{ return ProcessMemory(handle); }
 
+
+	/** Initializes internal Windows stuff required for WinAPI
+	functions like $(D EnumProcessModules).
+
+	When a process is created such stuff isn't initialized unless
+	some process code is executed.
+
+	Preconditions:
+	The process is created suspended and not started yet or its primary thread is paused
+	before initialization is finished (before module entry point is reached
+	in current implementation).
+	$(RED Preconditions violation results in undefined behavior.)
+
+	Example:
+	---
+	import std.process;
+	auto p = Process(environment["windir"] ~ `\system32\notepad.exe`, null, true);
+	scope(exit) p.closeHandles();
+	scope(exit) p.terminate();
+
+	HMODULE[256] buff;
+	DWORD needed;
+
+	// The call will fail because internal Windows stuff isn't initialized yet:
+	assert(!EnumProcessModules(p.handle, buff.ptr, buff.sizeof, &needed));
+
+	p.initializeWindowsStuff();
+
+	assert(EnumProcessModules(p.handle, buff.ptr, buff.sizeof, &needed));
+	---
+	*/
 	void initializeWindowsStuff()
 	{
 		RemoteAddress entryPoint = getEntryPoint(_handle);
@@ -212,13 +275,48 @@ struct Process
 		ubyte[loopCode.length] originCode;
 		memory.read(entryPoint, originCode);         // Save origin code
 		memory.write(entryPoint, loopCode, true);    // Write new loop code (and flush instruction cache)
-		primaryThread.executeUntil(entryPoint);        // Let Windows initialize its stuff
+		primaryThread.executeUntil(entryPoint);      // Let Windows initialize its stuff
 		memory.write(entryPoint, originCode, true);  // Restore origin code
 
 		// Restore origin memory protection
 		enforce(memory.changeProtection(entryPoint, loopCode.length, oldProtection) == PAGE_EXECUTE_READWRITE);
 	}
 
+	unittest
+	{
+		auto p = testLaunch();
+		scope(exit) p.terminate(), p.closeHandles();
+
+		HMODULE[256] buff;
+		DWORD needed;
+
+		// The call will fail because internal Windows stuff isn't initialized yet:
+		assert(!EnumProcessModules(p.handle, buff.ptr, buff.sizeof, &needed));
+
+		p.initializeWindowsStuff();
+
+		assert(EnumProcessModules(p.handle, buff.ptr, buff.sizeof, &needed));
+	}
+
+
+	/** Gets loaded modules.
+
+	Preconditions:
+	Initialized internal Windows stuff.
+	No DLL are loaded/unloaded during function call.
+	$(RED Preconditions violation results in undefined behavior.)
+
+	Example:
+	---
+	import std.process: environment;
+	auto p = Process(environment["windir"] ~ `\system32\notepad.exe`, null, true);
+	scope(exit) p.closeHandles();
+	scope(exit) p.terminate();
+
+	p.initializeWindowsStuff();
+	auto modules = p.getModules();
+	---
+	*/
 	HMODULE[] getModules()
 	{
 		auto buff = helperEnumProcessModules(_handle);
@@ -226,6 +324,17 @@ struct Process
 		return buff.dup;
 	}
 
+	unittest
+	{
+		auto p = testLaunch();
+		scope(exit) p.terminate(), p.closeHandles();
+
+		p.initializeWindowsStuff();
+		assert(p.getModules().length > 1);
+	}
+
+
+	/// Returns thread identifiers of all running threads in the process.
 	DWORD[] getThreadIds()
 	{
 		auto buff = helperNtQuerySystemInformation(SYSTEM_INFORMATION_CLASS.SystemProcessInformation, 0x20000);
@@ -254,6 +363,21 @@ struct Process
 		}
 	}
 
+	unittest
+	{
+		auto p = testLaunch();
+		scope(exit) p.terminate(), p.closeHandles();
+
+		assert(p.getThreadIds().length == 1);
+	}
+
+
+	/** Loads module into the process.
+
+	Preconditions:
+	Initialized internal Windows stuff.
+	$(RED Preconditions violation results in undefined behavior.)
+	*/
 	void loadDll(string dllName)
 	{
 		// Suspend thread and get its EIP
@@ -291,11 +415,13 @@ struct Process
 		primaryThread.resume();
 	}
 
+	/// Terminates the process.
 	void terminate()
 	{
 		enforce(TerminateProcess(_handle, -1));
 	}
 
+	/// Waits for the process to exit.
 	int waitForExit()
 	{
 		WaitForSingleObject(_handle, INFINITE);
@@ -304,8 +430,21 @@ struct Process
 		// Note: If the process returned STILL_ACTIVE(259) we do not care
 		return exitCode;
 	}
+
+	unittest
+	{
+		auto p = testLaunch();
+		scope(exit) p.closeHandles();
+
+		p.terminate();
+		assert(p.waitForExit() == -1);
+	}
 }
 
+
+/** Closes $(D process) handles if any.
+$(D process) may be unassociated.
+*/
 void closeHandles(ref Process process)
 {
 	if(process._handle && process._handle != GetCurrentProcess())
@@ -314,6 +453,18 @@ void closeHandles(ref Process process)
 		process._handle = null;
 	}
 	process._primaryThread.closeHandle();
+}
+
+unittest
+{
+	auto unassociated = Process.init;
+	unassociated.closeHandles();
+
+	auto local = Process.currentLocal;
+	local.closeHandles();
+
+	auto global = Process.getCurrentGlobal();
+	global.closeHandles();
 }
 
 
