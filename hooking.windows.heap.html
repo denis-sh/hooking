@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+	<meta charset="utf-8">
+	<title>hooking.windows.heap - Hooking Project documentation</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="description" content="">
+	<meta name="author" content="">
+
+	<!-- styles -->
+	<link href="bootDoc/assets/css/bootstrap.css" rel="stylesheet">
+	<style type="text/css">
+		body {
+		padding-top: 60px;
+		padding-bottom: 40px;
+		}
+		.sidebar-nav {
+		padding: 9px 0;
+		}
+	</style>
+	<link href="bootDoc/assets/css/bootstrap-responsive.css" rel="stylesheet">
+	<link href="bootDoc/bootdoc.css" rel="stylesheet">
+
+	<!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+	<!--[if lt IE 9]>
+		<script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+
+	<!-- fav and touch icons -->
+	<link rel="shortcut icon" href="bootDoc/assets/ico/favicon.ico">
+	<link rel="apple-touch-icon-precomposed" sizes="114x114" href="bootDoc/assets/ico/apple-touch-icon-114-precomposed.png">
+	<link rel="apple-touch-icon-precomposed" sizes="72x72" href="bootDoc/assets/ico/apple-touch-icon-72-precomposed.png">
+	<link rel="apple-touch-icon-precomposed" href="bootDoc/assets/ico/apple-touch-icon-57-precomposed.png">
+	
+	<!-- Introduce DDoc settings required by JavaScript -->
+	<script type="text/javascript">
+		var Title = 'hooking.windows.heap';
+		var SourceRepository = 'http://github.com/denis-sh/hooking/tree/master';
+		var PackageSeparator = '.';
+	</script>
+	
+	<style type="text/css">
+		.ddoc-icon-variable { background-image: url('bootDoc/ddoc-icons/var.png'); }
+		.ddoc-icon-function { background-image: url('bootDoc/ddoc-icons/func.png'); }
+		.ddoc-icon-property { background-image: url('bootDoc/ddoc-icons/property.png'); }
+		.ddoc-icon-struct { background-image: url('bootDoc/ddoc-icons/struct.png'); }
+		.ddoc-icon-class { background-image: url('bootDoc/ddoc-icons/class.png'); }
+		.ddoc-icon-enum { background-image: url('bootDoc/ddoc-icons/enum.png'); }
+		.ddoc-icon-template { background-image: url('bootDoc/ddoc-icons/template.png'); }
+	</style>
+	</head>
+
+	<body>
+	<!--
+	JavaScript reaps the module list from this element.
+	This is required for the MODULES macro to be reusable
+	in a noscript element later.
+	-->
+	<ul id="module-list-source" class="hidden">
+		
+	<li class="sidebar-list-entry tree-leaf"><a href="hooking.windows.heap.html" title="hooking.windows.heap"><i class="icon-th"></i>hooking.windows.heap</a></li>
+	<li class="sidebar-list-entry tree-leaf"><a href="hooking.windows.thread.html" title="hooking.windows.thread"><i class="icon-th"></i>hooking.windows.thread</a></li>
+	<li class="sidebar-list-entry tree-leaf"><a href="hooking.windows.processmemory.html" title="hooking.windows.processmemory"><i class="icon-th"></i>hooking.windows.processmemory</a></li>
+	<li class="sidebar-list-entry tree-leaf"><a href="hooking.windows.process.html" title="hooking.windows.process"><i class="icon-th"></i>hooking.windows.process</a></li>
+	</ul>
+	
+	<div class="navbar navbar-fixed-top">
+		<div class="navbar-inner">
+			<div class="container-fluid">
+				<a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+				</a>
+				<a class="brand" href="index.html">Hooking Project</a>
+				<div class="nav-collapse">
+					<ul class="nav">
+						<li class="active"><a href="index.html">Reference</a></li>
+					</ul>
+					
+					<form id="gotosymbol" class="navbar-search pull-left hidden">
+						<input type="text" class="search-query" placeholder="Go to symbol in hooking.windows.heap" data-provide="typeahead" data-items="4">
+					</form>
+					
+					<p class="navbar-text pull-right"><a href="https://github.com/denis-sh/hooking">Github Page</a></p>
+				</div><!--/.nav-collapse -->
+			</div>
+		</div>
+	</div>
+
+	<div class="container-fluid">
+		<div class="row-fluid">
+			<div class="span2">
+				<div class="well sidebar-nav">
+				<ul class="nav nav-list">
+					<li id="module-list" class="nav-header sidebar-list-entry">Modules<li>
+					<noscript>
+						
+	<li class="sidebar-list-entry tree-leaf"><a href="hooking.windows.heap.html" title="hooking.windows.heap"><i class="icon-th"></i>hooking.windows.heap</a></li>
+	<li class="sidebar-list-entry tree-leaf"><a href="hooking.windows.thread.html" title="hooking.windows.thread"><i class="icon-th"></i>hooking.windows.thread</a></li>
+	<li class="sidebar-list-entry tree-leaf"><a href="hooking.windows.processmemory.html" title="hooking.windows.processmemory"><i class="icon-th"></i>hooking.windows.processmemory</a></li>
+	<li class="sidebar-list-entry tree-leaf"><a href="hooking.windows.process.html" title="hooking.windows.process"><i class="icon-th"></i>hooking.windows.process</a></li>
+					</noscript>
+					<li id="symbol-list" class="nav-header sidebar-list-entry hidden">hooking.windows.heap</li>
+				</ul>
+				</div><!--/.well -->
+			</div><!--/span-->
+			
+			<div class="span10">
+				<div class="row-fluid">
+					<div class="span11">
+						<ul id="module-breadcrumb" class="breadcrumb">
+							<noscript><h1>hooking.windows.heap</h1></noscript>
+						</ul>
+						
+					</div>
+					<div class="span1 offset11">
+						<a href="index.html"><img src="bootDoc/assets/img/icon-github.png" alt="Hooking Project"/></a>
+					</div>
+				</div>
+				<div id="declaration-list">
+					<!-- Generated by Ddoc from ..\hooking\windows\heap.d -->
+<dl><p>Functions for <a class="symbol symbol-anchor" name="heap" href="#heap">heap</a> manipulation
+</p>
+<dt>License</dt><dd><a href="http://boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+
+</dd>
+<dt>Authors</dt><dd>Denis Shelomovskij</dd>
+</dl>
+<hr><div class="row-fluid declaration"><h3>pure nothrow @property @safe bool <a class="symbol symbol-anchor" name="associated" href="#associated">associated</a>(in Heap <i>heap</i>);
+</h3></div>
+<div class="declaration-content"><dl><p>Returns whether <span class="inlinecode"><i>heap</i></span> is accosiated with a <i>heap</i> handle.
+It is asserted that no member functions are called for an unassociated
+<span class="inlinecode">Heap</span> struct.
+</p>
+<dt>Example:</dt><dd>
+<pre class="d_code"><span class="d_keyword">assert</span>(processHeap.<u>associated</u>);
+<span class="d_keyword">assert</span>(!Heap.init.<u>associated</u>);
+<span class="d_keyword">auto</span> h = Heap.init.handle; <span class="d_comment">// assert violation
+</span></pre>
+</dd>
+</dl>
+</div>
+<hr><div class="row-fluid declaration"><h3>@property Heap <a class="symbol symbol-anchor" name="processHeap" href="#processHeap">processHeap</a>();
+</h3></div>
+<div class="declaration-content"><dl><p>Returns default heap of the calling process.</p>
+</dl>
+</div>
+<hr><div class="row-fluid declaration"><h3>struct <a class="symbol symbol-anchor" name="Heap" href="#Heap">Heap</a>;
+</h3></div>
+<div class="declaration-content"><dl><p>This struct encapsulates heap manipulation functionality.</p>
+</dl>
+<div class="offset1 member-list"><hr><div class="row-fluid declaration"><h3>this(void* <i>heapHandle</i>);
+</h3></div>
+<div class="declaration-content"><dl><p>Construct a <span class="inlinecode">Heap</span> from a <span class="inlinecode"><i>heapHandle</i></span>.</p>
+</dl>
+</div>
+</div>
+</div>
+
+
+				</div>
+				
+				<hr>
+				
+				<footer class="pull-left">
+					<p>Page generated with <a href="https://github.com/JakobOvrum/bootDoc">bootDoc</a>.</p>
+				</footer>
+				
+				<footer class="pull-right">
+					<p>&copy; Denis Shelomovskij 2012
+
+ 2012-2012</p>
+				</footer>
+			</div>
+		</div>
+	</div><!--/.fluid-container-->
+
+	<!-- Bootstrap javascript
+	================================================== -->
+	<!-- Placed at the end of the document so the pages load faster -->
+	<script src="bootDoc/assets/js/jquery.min.js"></script>
+	<script src="bootDoc/assets/js/bootstrap.min.js"></script>
+	
+	<!-- bootDoc javascript
+	================================================== -->
+	<script src="bootDoc/bootdoc.js"></script>
+	
+	</body>
+</html>
