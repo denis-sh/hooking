@@ -13,7 +13,7 @@ import core.sys.windows.windows;
 import std.exception;
 
 
-/** Returns whether $(D thread) is accosiated with a thread.
+/** Returns whether $(D thread) is _associated with a thread.
 It is asserted that no member functions are called for an unassociated
 $(D Thread) struct.
 

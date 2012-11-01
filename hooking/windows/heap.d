@@ -12,7 +12,7 @@ import core.sys.windows.windows;
 import std.exception;
 
 
-/** Returns whether $(D heap) is accosiated with a heap handle.
+/** Returns whether $(D heap) is _associated with a heap handle.
 It is asserted that no member functions are called for an unassociated
 $(D Heap) struct.
 

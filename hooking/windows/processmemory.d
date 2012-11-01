@@ -19,7 +19,7 @@ static assert(size_t.sizeof == 4);
 
 alias size_t RemoteAddress;
 
-/** Returns whether $(D memory) is accosiated with a process handle.
+/** Returns whether $(D memory) is _associated with a process handle.
 It is asserted that no member functions are called for an unassociated
 $(D ProcessMemory) struct.
 

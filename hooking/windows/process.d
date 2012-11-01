@@ -21,7 +21,7 @@ import hooking.windows.thread;
 import hooking.windows.processmemory;
 
 
-/** Returns whether $(D process) is accosiated with a process.
+/** Returns whether $(D process) is _associated with a process.
 It is asserted that no member functions are called for an unassociated
 $(D Process) struct.
 
