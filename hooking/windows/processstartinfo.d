@@ -25,6 +25,7 @@ struct ProcessStartInfo
 	{
 		string _commandLine, _file;
 		string[] _args;
+		bool _search;
 	}
 
 	@property
@@ -219,17 +220,44 @@ struct ProcessStartInfo
 			test(`a\b`  , `a\b`  , `"a\b"`  , [``], `"a\b" ""`);
 			test(`a\b c`, `a\b c`, `"a\b c"`, [`d`, `"e`, `\f`, `\"g`], `"a\b c" "d" "\"e" "\f" "\\\"g"`);
 		}
+
+
+		/** Gets or sets whether OS will search for executable file.
+
+		Default value is $(D false).
+		*/
+		bool searchForFile() const
+		{ return _search; }
+
+		/// ditto
+		void searchForFile(bool value)
+		{ _search = value; }
+
+		unittest
+		{
+			assert(!ProcessStartInfo.init.searchForFile);
+			assert(!ProcessStartInfo("a").searchForFile);
+			assert( ProcessStartInfo("a", true ).searchForFile);
+			assert( ProcessStartInfo("a", null, true).searchForFile);
+		}
 	}
 
 
 	/// Construct a $(D ProcessStartInfo) from a $(D commandLine).
-	this(string commandLine)
-	{ this.commandLine = commandLine; }
+	this(string commandLine, bool searchForFile = false)
+	{
+		this.commandLine = commandLine;
+		this.searchForFile = searchForFile;
+	}
 
 
 	/// Construct a $(D ProcessStartInfo) from an executable $(D file) and $(D arguments).
-	this(string file, string[] arguments)
-	{ this.file = file; this.arguments = arguments; }
+	this(string file, string[] arguments, bool searchForFile = false)
+	{
+		this.file = file;
+		this.arguments = arguments;
+		this.searchForFile = searchForFile;
+	}
 }
 
 
