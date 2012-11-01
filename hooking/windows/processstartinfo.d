@@ -224,6 +224,9 @@ struct ProcessStartInfo
 
 		/** Gets or sets whether OS will search for executable file.
 
+		Note:
+		Be careful with this as it can lead to $(B security vulnerability) if used careless.
+
 		Default value is $(D false).
 		*/
 		bool searchForFile() const
