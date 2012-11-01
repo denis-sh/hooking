@@ -227,11 +227,11 @@ struct Process
 
 	unittest
 	{
-		auto p = Process(ProcessStartInfo("cmd /c echo Hello!", true, false, true));
+		auto p = Process(ProcessStartInfo("cmd /c echo Hello!", true, true, true));
 		assert(p.handleAccess == PROCESS_ALL_ACCESS);
 		assert(p.primaryThread.threadId);
 		scope(exit) p.closeHandles();
-		p.waitForExit();
+		p.terminate();
 	}
 
 	unittest
