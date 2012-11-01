@@ -204,8 +204,7 @@ It is asserted that no member functions are called for an unassociated
 	In this case calling <span class="inlinecode">closeHandles</span> will result in unassociation of this struct.</p>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3><a name="Process.this"></a> this(const(char[]) <i>commandLine</i>, bool <i>searchForFile</i>, bool <i>launchSuspended</i>, bool <i>createNewConsole</i> = false);
-<br><a name="Process.this"></a> this(const(char[]) <i>path</i>, bool <i>searchForFile</i>, const(char[][]) <i>arguments</i>, bool <i>launchSuspended</i>, bool <i>createNewConsole</i> = false);
+<hr><div class="row-fluid declaration"><h3><a name="Process.this"></a> this(const(ProcessStartInfo) <i>startInfo</i>);
 </h3></div>
 <div class="declaration-content"><dl><p>Launch a new process.
 </p>
@@ -213,31 +212,20 @@ It is asserted that no member functions are called for an unassociated
 	<span class="inlinecode">primaryThread</span> will be set.
 
 </p>
-<dt>Note:</dt><dd>
-If you are creating a new process using <span class="inlinecode"><i>commandLine</i></span> (the first overload), be careful:
-	command line like <span class="inlinecode">"C:\a\b c\d."</span> will try to locate the following files
-	(<b>files</b>, not <b>folders</b>, if there is a folder named e.g. <span class="inlinecode">"C:\a\b"</span>
-	the folder will just be ignored):
-	<ul>	<li><span class="inlinecode">"C:\a\b"</span> </li>
-		<li><span class="inlinecode">"C:\a\b.exe"</span> </li>
-		<li><span class="inlinecode">"C:\a\b c\d."</span> </li>
-		<li><span class="inlinecode">"C:\a\b c\d..exe"</span> </li>
-	</ul>
-	To avoid such behaviour quote file name: <span class="inlinecode">`"C:\a\b" c\d.`</span>.
-<br><br>
-
-	<b>Also note</b>, that if there is no file named <span class="inlinecode">"x"</span>
-	it will try to locate <span class="inlinecode">"x.exe"</span>. I.e. even <span class="inlinecode">`"C:\a\b.exe" c\d.`</span>
-	will also check for <span class="inlinecode">"C:\a\b.exe.exe"</span> existence.
+<dt>Preconditions:</dt><dd>
+<span class="inlinecode"><i>startInfo</i></span> is associated.
 
 </dd>
 <dt>Example:</dt><dd>
-<pre class="d_code">	Process launch(<span class="d_keyword">in</span> <span class="d_keyword">char</span>[] path, <span class="d_keyword">in</span> <span class="d_keyword">char</span>[] argumentsCommandLine, <span class="d_keyword">bool</span> suspended)
-	{
-		<span class="d_keyword">import</span> std.string;
-		<span class="d_keyword">return</span> Process(xformat(<span class="d_string">`"%s" %s`</span>, path, argumentsCommandLine), suspended);
-	}
-</pre>
+<pre class="d_code">	<span class="d_comment">// With executable file searching:
+</span>	Process(ProcessStartInfo(<span class="d_string">"notepad"</span>, <span class="d_keyword">true</span>)).closeHandles();
+
+	<span class="d_comment">// Without executable file searching:
+</span>	<span class="d_keyword">import</span> std.process;
+	<span class="d_keyword">immutable</span> path = environment[<span class="d_string">"windir"</span>] ~ <span class="d_string">`\system32\notepad.exe`</span>;
+	Process(ProcessStartInfo(path, <span class="d_keyword">null</span>)).closeHandles(); <span class="d_comment">// using file &amp; arguments
+</span>	Process(ProcessStartInfo('"' ~ path ~ '"')).closeHandles(); <span class="d_comment">// using command line
+</span></pre>
 </dd>
 </dl>
 </div>
