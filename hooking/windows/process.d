@@ -19,6 +19,7 @@ import hooking.windows.c.winternl;
 import hooking.windows.heap;
 import hooking.windows.thread;
 import hooking.windows.processmemory;
+import hooking.windows.processstartinfo;
 
 
 /** Returns whether $(D process) is _associated with a process.
@@ -47,7 +48,7 @@ unittest
 
 version(unittest) Process testLaunch()
 {
-	return Process("notepad", true, null, true);
+	return Process(ProcessStartInfo("notepad", null, true, true));
 }
 
 
@@ -189,54 +190,33 @@ struct Process
 	$(D handleAccess) will be set to $(D PROCESS_ALL_ACCESS).
 	$(D primaryThread) will be set.
 
-	Note:
-	If you are creating a new process using $(D commandLine) (the first overload), be careful:
-	command line like $(D "C:\a\b c\d.") will try to locate the following files
-	($(B files), not $(B folders), if there is a folder named e.g. $(D "C:\a\b")
-	the folder will just be ignored):
-	$(UL
-		$(LI $(D "C:\a\b") )
-		$(LI $(D "C:\a\b.exe") )
-		$(LI $(D "C:\a\b c\d.") )
-		$(LI $(D "C:\a\b c\d..exe") )
-	)
-	To avoid such behaviour quote file name: $(D `"C:\a\b" c\d.`).
-
-	$(B Also note), that if there is no file named $(D "x")
-	it will try to locate $(D "x.exe"). I.e. even $(D `"C:\a\b.exe" c\d.`)
-	will also check for $(D "C:\a\b.exe.exe") existence.
+	Preconditions:
+	$(D startInfo) is associated.
 
 	Example:
 	---
-	Process launch(in char[] path, in char[] argumentsCommandLine, bool suspended)
-	{
-		import std.string;
-		return Process(xformat(`"%s" %s`, path, argumentsCommandLine), suspended);
-	}
+	// With executable file searching:
+	Process(ProcessStartInfo("notepad", true)).closeHandles();
+
+	// Without executable file searching:
+	import std.process;
+	immutable path = environment["windir"] ~ `\system32\notepad.exe`;
+	Process(ProcessStartInfo(path, null)).closeHandles(); // using file & arguments
+	Process(ProcessStartInfo('"' ~ path ~ '"')).closeHandles(); // using command line
 	---
 	*/
-	this(in char[] commandLine, bool searchForFile, bool launchSuspended, bool createNewConsole = false)
-	in { assert(commandLine.stripLeft().length); }
-	body
+	this(in ProcessStartInfo startInfo)
 	{
-		const cmd = commandLine.stripLeft();
-		const(wchar)* fileW = null;
-		if(!searchForFile)
-		{
-			immutable quoted = cmd[0] == '"';
-			const r = cmd[quoted .. $].findSplit(quoted ? `"` : " ");
-			assert(r[0].length);
-			fileW = toUTF16z(r[0]);
-		}
-
 		DWORD creationFlags = 0;
-		if(launchSuspended)
+		if(startInfo.suspended)
 			creationFlags |= CREATE_SUSPENDED;
-		if(createNewConsole)
+		if(startInfo.createNewConsole)
 			creationFlags |= CREATE_NEW_CONSOLE;
 		STARTUPINFOW startupInfo = { STARTUPINFOW.sizeof };
 		PROCESS_INFORMATION info;
-		enforce(CreateProcessW(fileW, cmd.length ? toUTF16(cmd ~ '\0').dup.ptr : null,
+		enforce(CreateProcessW(
+			startInfo.searchForFile ? null : toUTF16z(startInfo.file),
+			toUTF16(startInfo.commandLine ~ '\0').dup.ptr,
 			null, null, TRUE /* bInheritHandles */, creationFlags, null, null, &startupInfo, &info));
 		_handle = info.hProcess;
 		_handleAccess = PROCESS_ALL_ACCESS;
@@ -247,7 +227,7 @@ struct Process
 
 	unittest
 	{
-		auto p = Process("cmd /c echo Hello!", true, false, true);
+		auto p = Process(ProcessStartInfo("cmd /c echo Hello!", true, false, true));
 		assert(p.handleAccess == PROCESS_ALL_ACCESS);
 		assert(p.primaryThread.threadId);
 		scope(exit) p.closeHandles();
@@ -260,13 +240,13 @@ struct Process
 		immutable windir = environment["windir"], pathNoExt = windir ~ `\system32\cmd`;
 		assert(!windir.canFind(' '), xformat("Can't test with %%windir%%='%s'", windir));
 
-		assertThrown!Exception(Process("cmd"    , false, true));
-		assertThrown!Exception(Process("cmd.exe", false, true));
-		assertThrown!Exception(Process(pathNoExt, false, true));
+		assertThrown!Exception(Process(ProcessStartInfo("cmd"    , false, true)));
+		assertThrown!Exception(Process(ProcessStartInfo("cmd.exe", false, true)));
+		assertThrown!Exception(Process(ProcessStartInfo(pathNoExt, false, true)));
 
 		void assertLaunchs(string commandLine, bool search)
 		{
-			auto p = Process(commandLine, search, true);
+			auto p = Process(ProcessStartInfo(commandLine, search, true));
 			scope(exit) p.closeHandles();
 			p.terminate();
 		}
@@ -277,25 +257,6 @@ struct Process
 		assertLaunchs('"' ~ pathNoExt ~ `.exe" 1`, false);
 		assertLaunchs(pathNoExt, true);
 		assertLaunchs("cmd", true);
-	}
-
-
-	/// ditto
-	this(in char[] path, bool searchForFile, in char[][] arguments, bool launchSuspended, bool createNewConsole = false)
-	in
-	{
-		import std.path;
-		assert((path && isValidPath(path)) || (arguments.length && isValidPath(arguments[0])));
-	}
-	body
-	{
-
-		import std.process;
-		auto commandLine = '"' ~ (path ? path : arguments[0]) ~ '"';
-		foreach(arg; arguments[!path .. $])
-			commandLine ~= " " ~ escapeWindowsArgument(arg);
-
-		this(commandLine, searchForFile, launchSuspended, createNewConsole);
 	}
 
 
