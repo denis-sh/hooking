@@ -25,7 +25,7 @@ struct ProcessStartInfo
 	{
 		string _commandLine, _file;
 		string[] _args;
-		bool _search, _suspended;
+		bool _search, _suspended, _newConsole;
 	}
 
 	@property
@@ -267,25 +267,49 @@ struct ProcessStartInfo
 			assert( ProcessStartInfo("a", false, true).suspended);
 			assert( ProcessStartInfo("a", null, false, true).suspended);
 		}
+
+
+		/** Gets or sets whether new console will be created.
+
+		If not set, parent's console will be inherited.
+
+		Default value is $(D false).
+		*/
+		bool createNewConsole() const
+		{ return _newConsole; }
+
+		/// ditto
+		void createNewConsole(bool value)
+		{ _newConsole = value; }
+
+		unittest
+		{
+			assert(!ProcessStartInfo.init.createNewConsole);
+			assert(!ProcessStartInfo("a").createNewConsole);
+			assert( ProcessStartInfo("a", false, false, true).createNewConsole);
+			assert( ProcessStartInfo("a", null, false, false, true).createNewConsole);
+		}
 	}
 
 
 	/// Construct a $(D ProcessStartInfo) from a $(D commandLine).
-	this(string commandLine, bool searchForFile = false, bool suspended = false)
+	this(string commandLine, bool searchForFile = false, bool suspended = false, bool createNewConsole = false)
 	{
 		this.commandLine = commandLine;
 		this.searchForFile = searchForFile;
 		this.suspended = suspended;
+		this.createNewConsole = createNewConsole;
 	}
 
 
 	/// Construct a $(D ProcessStartInfo) from an executable $(D file) and $(D arguments).
-	this(string file, string[] arguments, bool searchForFile = false, bool suspended = false)
+	this(string file, string[] arguments, bool searchForFile = false, bool suspended = false, bool createNewConsole = false)
 	{
 		this.file = file;
 		this.arguments = arguments;
 		this.searchForFile = searchForFile;
 		this.suspended = suspended;
+		this.createNewConsole = createNewConsole;
 	}
 }
 
