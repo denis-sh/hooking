@@ -25,7 +25,7 @@ struct ProcessStartInfo
 	{
 		string _commandLine, _file;
 		string[] _args;
-		bool _search;
+		bool _search, _suspended;
 	}
 
 	@property
@@ -240,23 +240,49 @@ struct ProcessStartInfo
 			assert( ProcessStartInfo("a", true ).searchForFile);
 			assert( ProcessStartInfo("a", null, true).searchForFile);
 		}
+
+
+		/** Gets or sets whether the primary thread will be
+		created in a _suspended state.
+
+		The primary thread of the new process will not run until
+		it will be resumed.
+
+		Default value is $(D false).
+		*/
+		bool suspended() const
+		{ return _suspended; }
+
+		/// ditto
+		void suspended(bool value)
+		{ _suspended = value; }
+
+		unittest
+		{
+			assert(!ProcessStartInfo.init.suspended);
+			assert(!ProcessStartInfo("a").suspended);
+			assert( ProcessStartInfo("a", false, true).suspended);
+			assert( ProcessStartInfo("a", null, false, true).suspended);
+		}
 	}
 
 
 	/// Construct a $(D ProcessStartInfo) from a $(D commandLine).
-	this(string commandLine, bool searchForFile = false)
+	this(string commandLine, bool searchForFile = false, bool suspended = false)
 	{
 		this.commandLine = commandLine;
 		this.searchForFile = searchForFile;
+		this.suspended = suspended;
 	}
 
 
 	/// Construct a $(D ProcessStartInfo) from an executable $(D file) and $(D arguments).
-	this(string file, string[] arguments, bool searchForFile = false)
+	this(string file, string[] arguments, bool searchForFile = false, bool suspended = false)
 	{
 		this.file = file;
 		this.arguments = arguments;
 		this.searchForFile = searchForFile;
+		this.suspended = suspended;
 	}
 }
 
