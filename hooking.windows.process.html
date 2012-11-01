@@ -61,6 +61,7 @@
 	<li class="sidebar-list-entry tree-leaf"><a href="hooking.windows.heap.html" title="hooking.windows.heap"><i class="icon-th"></i>hooking.windows.heap</a></li>
 	<li class="sidebar-list-entry tree-leaf"><a href="hooking.windows.thread.html" title="hooking.windows.thread"><i class="icon-th"></i>hooking.windows.thread</a></li>
 	<li class="sidebar-list-entry tree-leaf"><a href="hooking.windows.processmemory.html" title="hooking.windows.processmemory"><i class="icon-th"></i>hooking.windows.processmemory</a></li>
+	<li class="sidebar-list-entry tree-leaf"><a href="hooking.windows.processstartinfo.html" title="hooking.windows.processstartinfo"><i class="icon-th"></i>hooking.windows.processstartinfo</a></li>
 	<li class="sidebar-list-entry tree-leaf"><a href="hooking.windows.process.html" title="hooking.windows.process"><i class="icon-th"></i>hooking.windows.process</a></li>
 	</ul>
 	
@@ -99,6 +100,7 @@
 	<li class="sidebar-list-entry tree-leaf"><a href="hooking.windows.heap.html" title="hooking.windows.heap"><i class="icon-th"></i>hooking.windows.heap</a></li>
 	<li class="sidebar-list-entry tree-leaf"><a href="hooking.windows.thread.html" title="hooking.windows.thread"><i class="icon-th"></i>hooking.windows.thread</a></li>
 	<li class="sidebar-list-entry tree-leaf"><a href="hooking.windows.processmemory.html" title="hooking.windows.processmemory"><i class="icon-th"></i>hooking.windows.processmemory</a></li>
+	<li class="sidebar-list-entry tree-leaf"><a href="hooking.windows.processstartinfo.html" title="hooking.windows.processstartinfo"><i class="icon-th"></i>hooking.windows.processstartinfo</a></li>
 	<li class="sidebar-list-entry tree-leaf"><a href="hooking.windows.process.html" title="hooking.windows.process"><i class="icon-th"></i>hooking.windows.process</a></li>
 					</noscript>
 					<li id="symbol-list" class="nav-header sidebar-list-entry hidden">hooking.windows.process</li>
@@ -127,9 +129,9 @@
 </dd>
 <dt>Authors</dt><dd>Denis Shelomovskij</dd>
 </dl>
-<hr><div class="row-fluid declaration"><h3>pure nothrow @property @safe bool <a class="symbol symbol-anchor" name="associated" href="#associated">associated</a>(in Process <i>process</i>);
+<hr><div class="row-fluid declaration"><h3><a name="associated"></a>pure nothrow @property @safe bool <a class="symbol symbol-anchor" name="associated" href="#associated">associated</a>(in Process <i>process</i>);
 </h3></div>
-<div class="declaration-content"><dl><p>Returns whether <span class="inlinecode"><i>process</i></span> is accosiated with a <i>process</i>.
+<div class="declaration-content"><dl><p>Returns whether <span class="inlinecode"><i>process</i></span> is associated with a <i>process</i>.
 It is asserted that no member functions are called for an unassociated
 <span class="inlinecode">Process</span> struct.
 </p>
@@ -143,24 +145,24 @@ It is asserted that no member functions are called for an unassociated
 <dt>Known Bugs</dt><dd>The check is implemented as <span class="inlinecode">Process</span> invariant and disabled because of <a href="http://d.puremagic.com/issues/show_bug.cgi?id=7892">Bugzilla 7892</a>.</dd>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3>struct <a class="symbol symbol-anchor" name="Process" href="#Process">Process</a>;
+<hr><div class="row-fluid declaration"><h3><a name="Process"></a>struct <a class="symbol symbol-anchor" name="Process" href="#Process">Process</a>;
 </h3></div>
 <div class="declaration-content"><dl><p>This struct encapsulates process hooking functionality.</p>
 </dl>
-<div class="offset1 member-list"><hr><div class="row-fluid declaration"><h3>static @property Process <a class="symbol symbol-anchor" name="currentLocal" href="#currentLocal">currentLocal</a>();
+<div class="offset1 member-list"><hr><div class="row-fluid declaration"><h3><a name="Process.currentLocal"></a>static @property Process <a class="symbol symbol-anchor" name="currentLocal" href="#currentLocal">currentLocal</a>();
 </h3></div>
 <div class="declaration-content"><dl><p>Returns a <span class="inlinecode">Process</span> with pseudo handle of current processes retrieved by
 	<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms683179(v=vs.85).aspx">GetCurrentProcess</a>
 	that is valid only in the context of current processes.</p>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3>static Process <a class="symbol symbol-anchor" name="getCurrentGlobal" href="#getCurrentGlobal">getCurrentGlobal</a>();
+<hr><div class="row-fluid declaration"><h3><a name="Process.getCurrentGlobal"></a>static Process <a class="symbol symbol-anchor" name="getCurrentGlobal" href="#getCurrentGlobal">getCurrentGlobal</a>();
 </h3></div>
 <div class="declaration-content"><dl><p>Returns a <span class="inlinecode">Process</span> with "real" handle of current processes
 	that is valid in the context of other processes.</p>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3>static @property uint[] <a class="symbol symbol-anchor" name="getRunningIds" href="#getRunningIds">getRunningIds</a>();
+<hr><div class="row-fluid declaration"><h3><a name="Process.getRunningIds"></a>static @property uint[] <a class="symbol symbol-anchor" name="getRunningIds" href="#getRunningIds">getRunningIds</a>();
 </h3></div>
 <div class="declaration-content"><dl><p>Returns process identifiers of all running processes.
 </p>
@@ -175,7 +177,7 @@ It is asserted that no member functions are called for an unassociated
 </dd>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3>this(uint <i>processId</i>, uint <i>desiredAccess</i>, bool <i>tryUsePseudoHandle</i>);
+<hr><div class="row-fluid declaration"><h3><a name="Process.this"></a> this(uint <i>processId</i>, uint <i>desiredAccess</i>, bool <i>tryUsePseudoHandle</i>);
 </h3></div>
 <div class="declaration-content"><dl><p>Construct a <span class="inlinecode">Process</span> from a <span class="inlinecode"><i>processId</i></span>.
 	If <span class="inlinecode"><i>tryUsePseudoHandle</i></span> is <span class="inlinecode"><span class="d_keyword">true</span></span> and <span class="inlinecode"><i>processId</i></span>
@@ -186,7 +188,7 @@ It is asserted that no member functions are called for an unassociated
 	Otherwise no handle is opened.</p>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3>this(void* <i>processHandle</i>, uint <i>handleAccess</i>, bool <i>remainPseudoHandle</i>);
+<hr><div class="row-fluid declaration"><h3><a name="Process.this"></a> this(void* <i>processHandle</i>, uint <i>handleAccess</i>, bool <i>remainPseudoHandle</i>);
 </h3></div>
 <div class="declaration-content"><dl><p>Construct a <span class="inlinecode">Process</span> from a <span class="inlinecode"><i>processHandle</i></span>.
 	<span class="inlinecode"><i>processHandle</i></span> access obtained when it was opened
@@ -202,22 +204,59 @@ It is asserted that no member functions are called for an unassociated
 	In this case calling <span class="inlinecode">closeHandles</span> will result in unassociation of this struct.</p>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3>@property HANDLE <a class="symbol symbol-anchor" name="handle" href="#handle">handle</a>();
+<hr><div class="row-fluid declaration"><h3><a name="Process.this"></a> this(const(char[]) <i>commandLine</i>, bool <i>searchForFile</i>, bool <i>launchSuspended</i>, bool <i>createNewConsole</i> = false);
+<br><a name="Process.this"></a> this(const(char[]) <i>path</i>, bool <i>searchForFile</i>, const(char[][]) <i>arguments</i>, bool <i>launchSuspended</i>, bool <i>createNewConsole</i> = false);
+</h3></div>
+<div class="declaration-content"><dl><p>Launch a new process.
+</p>
+<p><span class="inlinecode">handleAccess</span> will be set to <span class="inlinecode">PROCESS_ALL_ACCESS</span>.
+	<span class="inlinecode">primaryThread</span> will be set.
+
+</p>
+<dt>Note:</dt><dd>
+If you are creating a new process using <span class="inlinecode"><i>commandLine</i></span> (the first overload), be careful:
+	command line like <span class="inlinecode">"C:\a\b c\d."</span> will try to locate the following files
+	(<b>files</b>, not <b>folders</b>, if there is a folder named e.g. <span class="inlinecode">"C:\a\b"</span>
+	the folder will just be ignored):
+	<ul>	<li><span class="inlinecode">"C:\a\b"</span> </li>
+		<li><span class="inlinecode">"C:\a\b.exe"</span> </li>
+		<li><span class="inlinecode">"C:\a\b c\d."</span> </li>
+		<li><span class="inlinecode">"C:\a\b c\d..exe"</span> </li>
+	</ul>
+	To avoid such behaviour quote file name: <span class="inlinecode">`"C:\a\b" c\d.`</span>.
+<br><br>
+
+	<b>Also note</b>, that if there is no file named <span class="inlinecode">"x"</span>
+	it will try to locate <span class="inlinecode">"x.exe"</span>. I.e. even <span class="inlinecode">`"C:\a\b.exe" c\d.`</span>
+	will also check for <span class="inlinecode">"C:\a\b.exe.exe"</span> existence.
+
+</dd>
+<dt>Example:</dt><dd>
+<pre class="d_code">	Process launch(<span class="d_keyword">in</span> <span class="d_keyword">char</span>[] path, <span class="d_keyword">in</span> <span class="d_keyword">char</span>[] argumentsCommandLine, <span class="d_keyword">bool</span> suspended)
+	{
+		<span class="d_keyword">import</span> std.string;
+		<span class="d_keyword">return</span> Process(xformat(<span class="d_string">`"%s" %s`</span>, path, argumentsCommandLine), suspended);
+	}
+</pre>
+</dd>
+</dl>
+</div>
+<hr><div class="row-fluid declaration"><h3><a name="Process.handle"></a>@property HANDLE <a class="symbol symbol-anchor" name="handle" href="#handle">handle</a>();
 </h3></div>
 <div class="declaration-content"><dl><p>Gets the native handle.</p>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3>const @property DWORD <a class="symbol symbol-anchor" name="handleAccess" href="#handleAccess">handleAccess</a>();
+<hr><div class="row-fluid declaration"><h3><a name="Process.handleAccess"></a>const @property DWORD <a class="symbol symbol-anchor" name="handleAccess" href="#handleAccess">handleAccess</a>();
 </h3></div>
 <div class="declaration-content"><dl><p>Gets access to the <span class="inlinecode">handle</span>.</p>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3>const @property DWORD <a class="symbol symbol-anchor" name="processId" href="#processId">processId</a>();
+<hr><div class="row-fluid declaration"><h3><a name="Process.processId"></a>const @property DWORD <a class="symbol symbol-anchor" name="processId" href="#processId">processId</a>();
 </h3></div>
 <div class="declaration-content"><dl><p>Gets the process identifier.</p>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3>@property Thread <a class="symbol symbol-anchor" name="primaryThread" href="#primaryThread">primaryThread</a>();
+<hr><div class="row-fluid declaration"><h3><a name="Process.primaryThread"></a>@property Thread <a class="symbol symbol-anchor" name="primaryThread" href="#primaryThread">primaryThread</a>();
 </h3></div>
 <div class="declaration-content"><dl><p>Gets the primary thread.
 </p>
@@ -225,12 +264,12 @@ It is asserted that no member functions are called for an unassociated
 The process is created with a constructor launching an executable file.</dd>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3>@property ProcessMemory <a class="symbol symbol-anchor" name="memory" href="#memory">memory</a>();
+<hr><div class="row-fluid declaration"><h3><a name="Process.memory"></a>@property ProcessMemory <a class="symbol symbol-anchor" name="memory" href="#memory">memory</a>();
 </h3></div>
 <div class="declaration-content"><dl><p>Gets associated <span class="inlinecode">ProcessMemory</span> instance.</p>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3>void <a class="symbol symbol-anchor" name="initializeWindowsStuff" href="#initializeWindowsStuff">initializeWindowsStuff</a>();
+<hr><div class="row-fluid declaration"><h3><a name="Process.initializeWindowsStuff"></a>void <a class="symbol symbol-anchor" name="initializeWindowsStuff" href="#initializeWindowsStuff">initializeWindowsStuff</a>();
 </h3></div>
 <div class="declaration-content"><dl><p>Initializes internal Windows stuff required for WinAPI
 	functions like <span class="inlinecode">EnumProcessModules</span>.
@@ -265,7 +304,7 @@ The process is created suspended and not started yet or its primary thread is pa
 </dd>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3>void*[] <a class="symbol symbol-anchor" name="getModules" href="#getModules">getModules</a>();
+<hr><div class="row-fluid declaration"><h3><a name="Process.getModules"></a>void*[] <a class="symbol symbol-anchor" name="getModules" href="#getModules">getModules</a>();
 </h3></div>
 <div class="declaration-content"><dl><p>Gets loaded modules.
 </p>
@@ -287,12 +326,12 @@ Initialized internal Windows stuff.
 </dd>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3>uint[] <a class="symbol symbol-anchor" name="getThreadIds" href="#getThreadIds">getThreadIds</a>();
+<hr><div class="row-fluid declaration"><h3><a name="Process.getThreadIds"></a>uint[] <a class="symbol symbol-anchor" name="getThreadIds" href="#getThreadIds">getThreadIds</a>();
 </h3></div>
 <div class="declaration-content"><dl><p>Returns thread identifiers of all running threads in the process.</p>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3>void <a class="symbol symbol-anchor" name="loadDll" href="#loadDll">loadDll</a>(string <i>dllName</i>);
+<hr><div class="row-fluid declaration"><h3><a name="Process.loadDll"></a>void <a class="symbol symbol-anchor" name="loadDll" href="#loadDll">loadDll</a>(string <i>dllName</i>);
 </h3></div>
 <div class="declaration-content"><dl><p>Loads module into the process.
 </p>
@@ -301,7 +340,7 @@ Initialized internal Windows stuff.
 	<font color=red>Preconditions violation results in undefined behavior.</font></dd>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3>void <a class="symbol symbol-anchor" name="terminate" href="#terminate">terminate</a>(uint <i>exitCode</i> = -1);
+<hr><div class="row-fluid declaration"><h3><a name="Process.terminate"></a>void <a class="symbol symbol-anchor" name="terminate" href="#terminate">terminate</a>(uint <i>exitCode</i> = -1);
 </h3></div>
 <div class="declaration-content"><dl><p>Terminates the process and set its exit code with <span class="inlinecode"><i>exitCode</i></span>.
 </p>
@@ -309,13 +348,13 @@ Initialized internal Windows stuff.
 	<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms686714(v=vs.85).aspx">	TerminateProcess</a>.</p>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3>int <a class="symbol symbol-anchor" name="waitForExit" href="#waitForExit">waitForExit</a>();
+<hr><div class="row-fluid declaration"><h3><a name="Process.waitForExit"></a>int <a class="symbol symbol-anchor" name="waitForExit" href="#waitForExit">waitForExit</a>();
 </h3></div>
 <div class="declaration-content"><dl><p>Waits for the process to exit and returns exit code.</p>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3>bool <a class="symbol symbol-anchor" name="waitForExit" href="#waitForExit">waitForExit</a>(Duration <i>duration</i>, out uint <i>exitCode</i>);
-<br>bool <a class="symbol symbol-anchor" name="waitForExit" href="#waitForExit">waitForExit</a>(Duration <i>duration</i>);
+<hr><div class="row-fluid declaration"><h3><a name="Process.waitForExit"></a>bool <a class="symbol symbol-anchor" name="waitForExit" href="#waitForExit">waitForExit</a>(Duration <i>duration</i>, out uint <i>exitCode</i>);
+<br><a name="Process.waitForExit"></a>bool <a class="symbol symbol-anchor" name="waitForExit" href="#waitForExit">waitForExit</a>(Duration <i>duration</i>);
 </h3></div>
 <div class="declaration-content"><dl><p>Waits the specified <span class="inlinecode"><i>duration</i></span> for the process to exit
 	and returns wheter it exited. If it does exited, set <span class="inlinecode"><i>exitCode</i></span>
@@ -327,7 +366,7 @@ Initialized internal Windows stuff.
 </div>
 </div>
 </div>
-<hr><div class="row-fluid declaration"><h3>void <a class="symbol symbol-anchor" name="closeHandles" href="#closeHandles">closeHandles</a>(ref Process <i>process</i>);
+<hr><div class="row-fluid declaration"><h3><a name="closeHandles"></a>void <a class="symbol symbol-anchor" name="closeHandles" href="#closeHandles">closeHandles</a>(ref Process <i>process</i>);
 </h3></div>
 <div class="declaration-content"><dl><p>Closes <span class="inlinecode"><i>process</i></span> handles if any.
 <span class="inlinecode"><i>process</i></span> may be unassociated.</p>
