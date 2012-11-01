@@ -219,15 +219,14 @@ struct Process
 	in { assert(commandLine.stripLeft().length); }
 	body
 	{
-		auto cmd = commandLine.stripLeft();
+		const cmd = commandLine.stripLeft();
 		const(wchar)* fileW = null;
 		if(!searchForFile)
 		{
-			immutable quoted = cmd.skipOver('"');
-			const r = cmd.findSplit(quoted ? `"` : " ");
+			immutable quoted = cmd[0] == '"';
+			const r = cmd[quoted .. $].findSplit(quoted ? `"` : " ");
 			assert(r[0].length);
 			fileW = toUTF16z(r[0]);
-			cmd = r[2];
 		}
 
 		DWORD creationFlags = 0;
