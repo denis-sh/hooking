@@ -12,7 +12,8 @@ import core.sys.windows.windows;
 import core.time;
 import std.utf;
 import std.exception;
-import std.algorithm: max;
+import std.algorithm;
+import std.string;
 
 import hooking.windows.c.winternl;
 import hooking.windows.heap;
@@ -46,8 +47,7 @@ unittest
 
 version(unittest) Process testLaunch()
 {
-	import std.process;
-	return Process(environment["windir"] ~ `\system32\notepad.exe`, null, true);
+	return Process("notepad", true, null, true);
 }
 
 
@@ -215,10 +215,21 @@ struct Process
 	}
 	---
 	*/
-	this(in char[] commandLine, bool launchSuspended, bool createNewConsole = false)
-	in { assert(commandLine); }
+	this(in char[] commandLine, bool searchForFile, bool launchSuspended, bool createNewConsole = false)
+	in { assert(commandLine.stripLeft().length); }
 	body
 	{
+		auto cmd = commandLine.stripLeft();
+		const(wchar)* fileW = null;
+		if(!searchForFile)
+		{
+			immutable quoted = cmd.skipOver('"');
+			const r = cmd.findSplit(quoted ? `"` : " ");
+			assert(r[0].length);
+			fileW = toUTF16z(r[0]);
+			cmd = r[2];
+		}
+
 		DWORD creationFlags = 0;
 		if(launchSuspended)
 			creationFlags |= CREATE_SUSPENDED;
@@ -226,7 +237,7 @@ struct Process
 			creationFlags |= CREATE_NEW_CONSOLE;
 		STARTUPINFOW startupInfo = { STARTUPINFOW.sizeof };
 		PROCESS_INFORMATION info;
-		enforce(CreateProcessW(null, toUTF16(commandLine ~ '\0').dup.ptr,
+		enforce(CreateProcessW(fileW, cmd.length ? toUTF16(cmd ~ '\0').dup.ptr : null,
 			null, null, TRUE /* bInheritHandles */, creationFlags, null, null, &startupInfo, &info));
 		_handle = info.hProcess;
 		_handleAccess = PROCESS_ALL_ACCESS;
@@ -237,16 +248,41 @@ struct Process
 
 	unittest
 	{
-		auto p = Process("cmd /c echo Hello!", false, true);
+		auto p = Process("cmd /c echo Hello!", true, false, true);
 		assert(p.handleAccess == PROCESS_ALL_ACCESS);
 		assert(p.primaryThread.threadId);
 		scope(exit) p.closeHandles();
 		p.waitForExit();
 	}
 
+	unittest
+	{
+		import std.process;
+		immutable windir = environment["windir"], pathNoExt = windir ~ `\system32\cmd`;
+		assert(!windir.canFind(' '), xformat("Can't test with %%windir%%='%s'", windir));
+
+		assertThrown!Exception(Process("cmd"    , false, true));
+		assertThrown!Exception(Process("cmd.exe", false, true));
+		assertThrown!Exception(Process(pathNoExt, false, true));
+
+		void assertLaunchs(string commandLine, bool search)
+		{
+			auto p = Process(commandLine, search, true);
+			scope(exit) p.closeHandles();
+			p.terminate();
+		}
+
+		assertLaunchs(pathNoExt ~ ".exe", false);
+		assertLaunchs('"' ~ pathNoExt ~ `.exe"`, false);
+		assertLaunchs(pathNoExt ~ ".exe 1", false);
+		assertLaunchs('"' ~ pathNoExt ~ `.exe" 1`, false);
+		assertLaunchs(pathNoExt, true);
+		assertLaunchs("cmd", true);
+	}
+
 
 	/// ditto
-	this(in char[] path, in char[][] arguments, bool launchSuspended, bool createNewConsole = false)
+	this(in char[] path, bool searchForFile, in char[][] arguments, bool launchSuspended, bool createNewConsole = false)
 	in
 	{
 		import std.path;
@@ -260,7 +296,7 @@ struct Process
 		foreach(arg; arguments[!path .. $])
 			commandLine ~= " " ~ escapeWindowsArgument(arg);
 
-		this(commandLine, launchSuspended, createNewConsole);
+		this(commandLine, searchForFile, launchSuspended, createNewConsole);
 	}
 
 
