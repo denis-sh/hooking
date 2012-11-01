@@ -183,6 +183,38 @@ struct Process
 		}
 	}
 
+
+	/** Launch a new process.
+	
+	$(D handleAccess) will be set to $(D PROCESS_ALL_ACCESS).
+	$(D primaryThread) will be set.
+
+	Note:
+	If you are creating a new process using $(D commandLine) (the first overload), be careful:
+	command line like $(D "C:\a\b c\d.") will try to locate the following files
+	($(B files), not $(B folders), if there is a folder named e.g. $(D "C:\a\b")
+	the folder will just be ignored):
+	$(UL
+		$(LI $(D "C:\a\b") )
+		$(LI $(D "C:\a\b.exe") )
+		$(LI $(D "C:\a\b c\d.") )
+		$(LI $(D "C:\a\b c\d..exe") )
+	)
+	To avoid such behaviour quote file name: $(D `"C:\a\b" c\d.`).
+
+	$(B Also note), that if there is no file named $(D "x")
+	it will try to locate $(D "x.exe"). I.e. even $(D `"C:\a\b.exe" c\d.`)
+	will also check for $(D "C:\a\b.exe.exe") existence.
+
+	Example:
+	---
+	Process launch(in char[] path, in char[] argumentsCommandLine, bool suspended)
+	{
+		import std.string;
+		return Process(xformat(`"%s" %s`, path, argumentsCommandLine), suspended);
+	}
+	---
+	*/
 	this(in char[] commandLine, bool launchSuspended, bool createNewConsole = false)
 	in { assert(commandLine); }
 	body
@@ -203,6 +235,17 @@ struct Process
 		_primaryThread._threadId = info.dwThreadId;
 	}
 
+	unittest
+	{
+		auto p = Process("cmd /c echo Hello!", false, true);
+		assert(p.handleAccess == PROCESS_ALL_ACCESS);
+		assert(p.primaryThread.threadId);
+		scope(exit) p.closeHandles();
+		p.waitForExit();
+	}
+
+
+	/// ditto
 	this(in char[] path, in char[][] arguments, bool launchSuspended, bool createNewConsole = false)
 	in
 	{
