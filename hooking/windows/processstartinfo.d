@@ -222,30 +222,28 @@ struct ProcessStartInfo
 		}
 
 
-		/** Gets or sets whether OS will search for executable file.
+		/** Whether OS will search for executable file.
 
 		Note:
 		Be careful with this as it can lead to $(B security vulnerability) if used careless.
 
 		Default value is $(D false).
 		*/
-		bool searchForFile() const
+		ref inout(bool) searchForFile() inout
 		{ return _search; }
-
-		/// ditto
-		void searchForFile(bool value)
-		{ _search = value; }
 
 		unittest
 		{
 			assert(!ProcessStartInfo.init.searchForFile);
-			assert(!ProcessStartInfo("a").searchForFile);
+			auto p = ProcessStartInfo("a");
+			assert(!p.searchForFile);
+			assert( p.searchForFile |= true);
 			assert( ProcessStartInfo("a", true ).searchForFile);
 			assert( ProcessStartInfo("a", null, true).searchForFile);
 		}
 
 
-		/** Gets or sets whether the primary thread will be
+		/** Whether the primary thread will be
 		created in a _suspended state.
 
 		The primary thread of the new process will not run until
@@ -253,39 +251,35 @@ struct ProcessStartInfo
 
 		Default value is $(D false).
 		*/
-		bool suspended() const
+		ref inout(bool) suspended() inout
 		{ return _suspended; }
-
-		/// ditto
-		void suspended(bool value)
-		{ _suspended = value; }
 
 		unittest
 		{
 			assert(!ProcessStartInfo.init.suspended);
-			assert(!ProcessStartInfo("a").suspended);
+			auto p = ProcessStartInfo("a");
+			assert(!p.suspended);
+			assert( p.suspended |= true);
 			assert( ProcessStartInfo("a", false, true).suspended);
 			assert( ProcessStartInfo("a", null, false, true).suspended);
 		}
 
 
-		/** Gets or sets whether new console will be created.
+		/** Whether new console will be created.
 
 		If not set, parent's console will be inherited.
 
 		Default value is $(D false).
 		*/
-		bool createNewConsole() const
+		ref inout(bool) createNewConsole() inout
 		{ return _newConsole; }
-
-		/// ditto
-		void createNewConsole(bool value)
-		{ _newConsole = value; }
 
 		unittest
 		{
 			assert(!ProcessStartInfo.init.createNewConsole);
-			assert(!ProcessStartInfo("a").createNewConsole);
+			auto p = ProcessStartInfo("a");
+			assert(!p.createNewConsole);
+			assert( p.createNewConsole |= true);
 			assert( ProcessStartInfo("a", false, false, true).createNewConsole);
 			assert( ProcessStartInfo("a", null, false, false, true).createNewConsole);
 		}
