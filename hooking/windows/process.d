@@ -183,8 +183,8 @@ struct Process
 		}
 	}
 
-	this(string file, string arguments, bool launchSuspended, bool createNewConsole = false)
-	in { assert(file); }
+	this(in char[] commandLine, bool launchSuspended, bool createNewConsole = false)
+	in { assert(commandLine); }
 	body
 	{
 		DWORD creationFlags = 0;
@@ -194,12 +194,29 @@ struct Process
 			creationFlags |= CREATE_NEW_CONSOLE;
 		STARTUPINFOW startupInfo = { STARTUPINFOW.sizeof };
 		PROCESS_INFORMATION info;
-		enforce(CreateProcessW(toUTF16z(file), arguments ? toUTF16(arguments ~ '\0').dup.ptr : null,
+		enforce(CreateProcessW(null, toUTF16(commandLine ~ '\0').dup.ptr,
 			null, null, TRUE /* bInheritHandles */, creationFlags, null, null, &startupInfo, &info));
 		_handle = info.hProcess;
 		_processId = info.dwProcessId;
 		_primaryThread._handle = info.hThread;
 		_primaryThread._threadId = info.dwThreadId;
+	}
+
+	this(in char[] path, in char[][] arguments, bool launchSuspended, bool createNewConsole = false)
+	in
+	{
+		import std.path;
+		assert((path && isValidPath(path)) || (arguments.length && isValidPath(arguments[0])));
+	}
+	body
+	{
+
+		import std.process;
+		auto commandLine = '"' ~ (path ? path : arguments[0]) ~ '"';
+		foreach(arg; arguments[!path .. $])
+			commandLine ~= " " ~ escapeWindowsArgument(arg);
+
+		this(commandLine, launchSuspended, createNewConsole);
 	}
 
 
