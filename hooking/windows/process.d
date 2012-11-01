@@ -197,6 +197,7 @@ struct Process
 		enforce(CreateProcessW(null, toUTF16(commandLine ~ '\0').dup.ptr,
 			null, null, TRUE /* bInheritHandles */, creationFlags, null, null, &startupInfo, &info));
 		_handle = info.hProcess;
+		_handleAccess = PROCESS_ALL_ACCESS;
 		_processId = info.dwProcessId;
 		_primaryThread._handle = info.hThread;
 		_primaryThread._threadId = info.dwThreadId;
