@@ -205,10 +205,9 @@ File path will be quoted if it isn't.
 <p>Also unsets <span class="inlinecode">storedAsCommandLine</span>.</p>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3><a name="ProcessStartInfo.searchForFile"></a>const @property bool <a class="symbol symbol-anchor" name="searchForFile" href="#searchForFile">searchForFile</a>();
-<br><a name="ProcessStartInfo.searchForFile"></a>@property void <a class="symbol symbol-anchor" name="searchForFile" href="#searchForFile">searchForFile</a>(bool <i>value</i>);
+<hr><div class="row-fluid declaration"><h3><a name="ProcessStartInfo.searchForFile"></a>inout @property ref inout(bool) <a class="symbol symbol-anchor" name="searchForFile" href="#searchForFile">searchForFile</a>();
 </h3></div>
-<div class="declaration-content"><dl><p>Gets or sets whether OS will search for executable file.
+<div class="declaration-content"><dl><p>Whether OS will search for executable file.
 </p>
 <dt>Note:</dt><dd>
 Be careful with this as it can lead to <b>security vulnerability</b> if used careless.
@@ -217,10 +216,9 @@ Be careful with this as it can lead to <b>security vulnerability</b> if used car
 		Default value is <span class="inlinecode"><span class="d_keyword">false</span></span>.</dd>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3><a name="ProcessStartInfo.suspended"></a>const @property bool <a class="symbol symbol-anchor" name="suspended" href="#suspended">suspended</a>();
-<br><a name="ProcessStartInfo.suspended"></a>@property void <a class="symbol symbol-anchor" name="suspended" href="#suspended">suspended</a>(bool <i>value</i>);
+<hr><div class="row-fluid declaration"><h3><a name="ProcessStartInfo.suspended"></a>inout @property ref inout(bool) <a class="symbol symbol-anchor" name="suspended" href="#suspended">suspended</a>();
 </h3></div>
-<div class="declaration-content"><dl><p>Gets or sets whether the primary thread will be
+<div class="declaration-content"><dl><p>Whether the primary thread will be
 		created in a suspended state.
 </p>
 <p>The primary thread of the new process will not run until
@@ -230,10 +228,9 @@ Be careful with this as it can lead to <b>security vulnerability</b> if used car
 		Default value is <span class="inlinecode"><span class="d_keyword">false</span></span>.</p>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3><a name="ProcessStartInfo.createNewConsole"></a>const @property bool <a class="symbol symbol-anchor" name="createNewConsole" href="#createNewConsole">createNewConsole</a>();
-<br><a name="ProcessStartInfo.createNewConsole"></a>@property void <a class="symbol symbol-anchor" name="createNewConsole" href="#createNewConsole">createNewConsole</a>(bool <i>value</i>);
+<hr><div class="row-fluid declaration"><h3><a name="ProcessStartInfo.createNewConsole"></a>inout @property ref inout(bool) <a class="symbol symbol-anchor" name="createNewConsole" href="#createNewConsole">createNewConsole</a>();
 </h3></div>
-<div class="declaration-content"><dl><p>Gets or sets whether new console will be created.
+<div class="declaration-content"><dl><p>Whether new console will be created.
 </p>
 <p>If not set, parent's console will be inherited.
 <br><br>
