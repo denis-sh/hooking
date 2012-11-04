@@ -129,7 +129,7 @@
 </dd>
 <dt>Authors</dt><dd>Denis Shelomovskij</dd>
 </dl>
-<hr><div class="row-fluid declaration"><h3><a name="associated"></a>pure nothrow @property @safe bool <a class="symbol symbol-anchor" name="associated" href="#associated">associated</a>(in ProcessMemory <i>memory</i>);
+<hr><div class="row-fluid declaration"><h3><a name="associated"></a>pure nothrow @property @safe bool <span class="symbol-target" id="associated">&nbsp;</span><a class="symbol-link" href="#associated">associated</a>(in ProcessMemory <i>memory</i>);
 </h3></div>
 <div class="declaration-content"><dl><p>Returns whether <span class="inlinecode"><i>memory</i></span> is associated with a process handle.
 It is asserted that no member functions are called for an unassociated
@@ -143,13 +143,13 @@ It is asserted that no member functions are called for an unassociated
 </dd>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3><a name="ProcessMemory"></a>struct <a class="symbol symbol-anchor" name="ProcessMemory" href="#ProcessMemory">ProcessMemory</a>;
+<hr><div class="row-fluid declaration"><h3><a name="ProcessMemory"></a>struct <span class="symbol-target" id="ProcessMemory">&nbsp;</span><a class="symbol-link" href="#ProcessMemory">ProcessMemory</a>;
 </h3></div>
 <div class="declaration-content"><dl><p>This struct encapsulates process memory manipulation functionality.</p>
 </dl>
-<div class="offset1 member-list"><hr><div class="row-fluid declaration"><h3><a name="ProcessMemory.current"></a>static @property ProcessMemory <a class="symbol symbol-anchor" name="current" href="#current">current</a>();
+<div class="offset1 member-list"><hr><div class="row-fluid declaration"><h3><a name="ProcessMemory.current"></a>static @property ProcessMemory <span class="symbol-target" id="current">&nbsp;</span><a class="symbol-link" href="#current">current</a>();
 </h3></div>
-<div class="declaration-content"><dl><p>Gets a <span class="inlinecode">ProcessMemory</span> with associated with <a class="symbol symbol-anchor" name="current" href="#current">current</a> processes.</p>
+<div class="declaration-content"><dl><p>Gets a <span class="inlinecode">ProcessMemory</span> with associated with <span class="symbol-target" id="current">&nbsp;</span><a class="symbol-link" href="#current">current</a> processes.</p>
 </dl>
 </div>
 <hr><div class="row-fluid declaration"><h3><a name="ProcessMemory.this"></a> this(void* <i>processHandle</i>);
@@ -157,12 +157,12 @@ It is asserted that no member functions are called for an unassociated
 <div class="declaration-content"><dl><p>Construct a <span class="inlinecode">ProcessMemory</span> from a <span class="inlinecode"><i>processHandle</i></span>.</p>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3><a name="ProcessMemory.processHandle"></a>@property HANDLE <a class="symbol symbol-anchor" name="processHandle" href="#processHandle">processHandle</a>();
+<hr><div class="row-fluid declaration"><h3><a name="ProcessMemory.processHandle"></a>@property HANDLE <span class="symbol-target" id="processHandle">&nbsp;</span><a class="symbol-link" href="#processHandle">processHandle</a>();
 </h3></div>
 <div class="declaration-content"><dl><p>Gets the handle of the associated process. </p>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3><a name="ProcessMemory.changeProtection"></a>DWORD <a class="symbol symbol-anchor" name="changeProtection" href="#changeProtection">changeProtection</a>(RemoteAddress <i>address</i>, size_t <i>size</i>, DWORD <i>newProtection</i>);
+<hr><div class="row-fluid declaration"><h3><a name="ProcessMemory.changeProtection"></a>DWORD <span class="symbol-target" id="changeProtection">&nbsp;</span><a class="symbol-link" href="#changeProtection">changeProtection</a>(RemoteAddress <i>address</i>, size_t <i>size</i>, DWORD <i>newProtection</i>);
 </h3></div>
 <div class="declaration-content"><dl><p>Set access protection of the specified memory region to <span class="inlinecode"><i>newProtection</i></span>.
 	Returns previous protection of the first page in the specified region.
@@ -171,7 +171,7 @@ It is asserted that no member functions are called for an unassociated
 <span class="inlinecode"><i>newProtection</i></span> is a valid memory protection.</dd>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3><a name="ProcessMemory.read"></a>void <a class="symbol symbol-anchor" name="read" href="#read">read</a>(RemoteAddress <i>baseAddress</i>, void[] <i>buff</i>);
+<hr><div class="row-fluid declaration"><h3><a name="ProcessMemory.read"></a>void <span class="symbol-target" id="read">&nbsp;</span><a class="symbol-link" href="#read">read</a>(RemoteAddress <i>baseAddress</i>, void[] <i>buff</i>);
 </h3></div>
 <div class="declaration-content"><dl><p>Reads <span class="inlinecode"><i>buff</i>.length</span> bytes of memory starting with <span class="inlinecode"><i>baseAddress</i></span> into <span class="inlinecode"><i>buff</i></span>.
 </p>
@@ -195,7 +195,7 @@ It is asserted that no member functions are called for an unassociated
 </dd>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3><a name="ProcessMemory.get"></a>T <a class="symbol symbol-anchor" name="get" href="#get">get</a>(T)(RemoteAddress <i>baseAddress</i>);
+<hr><div class="row-fluid declaration"><h3><a name="ProcessMemory.get"></a>T <span class="symbol-target" id="get">&nbsp;</span><a class="symbol-link" href="#get">get</a>(T)(RemoteAddress <i>baseAddress</i>);
 </h3></div>
 <div class="declaration-content"><dl><p>Reads <span class="inlinecode">T.sizeof</span> bytes of memory starting with <span class="inlinecode">baseAddress</span>
 	and returns it as <span class="inlinecode">T</span>.
@@ -214,7 +214,7 @@ It is asserted that no member functions are called for an unassociated
 </dd>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3><a name="ProcessMemory.write"></a>void <a class="symbol symbol-anchor" name="write" href="#write">write</a>(RemoteAddress <i>baseAddress</i>, in void[] <i>buff</i>, bool <i>flushInstructionCache</i> = false);
+<hr><div class="row-fluid declaration"><h3><a name="ProcessMemory.write"></a>void <span class="symbol-target" id="write">&nbsp;</span><a class="symbol-link" href="#write">write</a>(RemoteAddress <i>baseAddress</i>, in void[] <i>buff</i>, bool <i>flushInstructionCache</i> = false);
 </h3></div>
 <div class="declaration-content"><dl><p>Writes <span class="inlinecode">T.sizeof</span> bytes of memory starting with <span class="inlinecode"><i>baseAddress</i></span>
 	and returns it as <span class="inlinecode">T</span>.
