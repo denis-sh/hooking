@@ -58,7 +58,7 @@ struct Heap
 	}
 
 
-	/// Gets the _handle of the associated process. 
+	/// Gets the _handle of the associated heap.
 	@property HANDLE handle()
 	in { assert(associated); }
 	body { return _handle; }
