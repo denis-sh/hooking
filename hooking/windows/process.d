@@ -102,7 +102,11 @@ struct Process
 		DWORD _processId;
 		Thread _primaryThread;
 	}
-	
+
+
+	@disable this();
+	@disable this(this);
+
 
 	/** Construct a $(D Process) from a $(D processId).
 	If $(D tryUsePseudoHandle) is $(D true) and $(D processId)
@@ -127,6 +131,7 @@ struct Process
 			_handleAccess = desiredAccess;
 		}
 		_processId = processId;
+		_primaryThread = Thread.init;
 	}
 
 
@@ -156,6 +161,7 @@ struct Process
 			_handleAccess = isPseudoHandle ? PROCESS_ALL_ACCESS : handleAccess;
 			if(_handleAccess & (PROCESS_QUERY_INFORMATION  | PROCESS_QUERY_LIMITED_INFORMATION))
 				_processId = enforce(GetProcessId(processHandle));
+			_primaryThread = Thread.init;
 		}
 	}
 
@@ -284,7 +290,7 @@ struct Process
 	Preconditions:
 	The process is created with a constructor launching an executable file.
 	*/
-	@property Thread primaryThread()
+	@property ref Thread primaryThread()
 	in 
 	{
 		assert(associated);
@@ -630,7 +636,7 @@ enum : DWORD
 private:
 
 // TODO: throw on DLL loading failure
-size_t allocateRemoteCodeAndData(Process process, string dllName, size_t jmpAddress, out size_t executeStart)
+size_t allocateRemoteCodeAndData(ref Process process, string dllName, size_t jmpAddress, out size_t executeStart)
 {
 	wstring strW = toUTF16(dllName);
 	auto buff = new ubyte[(strW.length + 1) * 2 + 5 + 5 + 5];

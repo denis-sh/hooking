@@ -21,6 +21,10 @@ struct Thread
 	package DWORD _threadId;
 
 
+	@disable this();
+	@disable this(this);
+
+
 	/// Construct a $(D Thread) from a $(D threadHandle).
 	this(HANDLE threadHandle)
 	out { assert(associated); }

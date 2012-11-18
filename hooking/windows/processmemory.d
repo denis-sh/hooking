@@ -38,6 +38,7 @@ struct ProcessMemory
 
 
 	@disable this();
+	@disable this(this);
 
 
 	/// Construct a $(D ProcessMemory) from a $(D processHandle).

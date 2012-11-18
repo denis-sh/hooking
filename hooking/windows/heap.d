@@ -28,6 +28,10 @@ struct Heap
 	private HANDLE _handle;
 
 
+	@disable this();
+	@disable this(this);
+
+
 	/// Construct a $(D Heap) from a $(D heapHandle).
 	this(HANDLE heapHandle)
 	out { assert(associated); }
