@@ -13,8 +13,10 @@ import std.exception;
 import std.string: xformat;
 import std.range: empty;
 import std.stdio: stderr;
+import std.conv: emplace;
 
 import hooking.windows.process;
+import hooking.windows.processstartinfo;
 
 enum ExitCodes { success, processNonZeroReturn, dllLoadingFailure, processLaunchingFailure, incorrectUsage }
 
@@ -44,8 +46,10 @@ int main(string[] args)
 	}
 
 
-	Process process;
-	if(auto e = collectException(process = Process(file, fileArgs, true)))
+	Process process = void;
+	auto processStartInfo = ProcessStartInfo("x " ~ fileArgs, false, true);
+	processStartInfo.file = file;
+	if(auto e = collectException(emplace(&process, processStartInfo)))
 	{
 		stderr.writefln("Process launching failure: %s", e.msg);
 		return ExitCodes.processLaunchingFailure;
