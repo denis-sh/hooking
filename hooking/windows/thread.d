@@ -13,25 +13,6 @@ import core.sys.windows.windows;
 import std.exception;
 
 
-/** Returns whether $(D thread) is _associated with a thread.
-It is asserted that no member functions are called for an unassociated
-$(D Thread) struct.
-
-Example:
----
-assert(!Thread.init.associated);
-auto h = Thread.init.handle; // assert violation
----
-*/
-@property bool associated(in Thread thread) @safe pure nothrow
-{ return thread._handle || thread._threadId; }
-
-unittest
-{
-	assert(!Thread.init.associated);
-}
-
-
 /** This struct encapsulates thread manipulation functionality.
 */
 struct Thread
@@ -40,31 +21,51 @@ struct Thread
 	package DWORD _threadId;
 
 
-	invariant()
-	{ assert(this.associated, "Attempting to use unassociated Thread struct"); }
-
-
 	/// Construct a $(D Thread) from a $(D threadHandle).
 	this(HANDLE threadHandle)
+	out { assert(associated); }
+	body
 	{
 		_handle = threadHandle;
 		_threadId = getThreadOrProcessIdOfThread(_handle, false);
 	}
 
 
+	/** Returns whether $(D this) is _associated with a thread.
+	It is asserted that no member functions are called for an unassociated
+	$(D Thread) struct.
+
+	Example:
+	---
+	assert(!Thread.init.associated);
+	auto h = Thread.init.handle; // assert violation
+	---
+	*/
+	@property bool associated() const @safe pure nothrow
+	{ return _handle || _threadId; }
+
+	unittest
+	{
+		assert(!Thread.init.associated);
+	}
+
+
 	/// Gets the native _handle.
 	@property HANDLE handle()
-	{ return _handle; }
+	in { assert(associated); }
+	body { return _handle; }
 
 
 	/// Gets the thread identifier.
 	@property DWORD threadId() const
-	{ return _threadId; }
+	in { assert(associated); }
+	body { return _threadId; }
 
 
 	/// Gets the process identifier of the owner process.
 	@property DWORD ownerProcessId()
-	{ return enforce(getThreadOrProcessIdOfThread(_handle, true)); }
+	in { assert(associated); }
+	body { return enforce(getThreadOrProcessIdOfThread(_handle, true)); }
 
 
 	/** Suspends thread.
@@ -73,7 +74,9 @@ struct Thread
 	$(HTTP msdn.microsoft.com/en-us/library/windows/desktop/ms686345(v=vs.85).aspx,
 	SuspendThread).
 	*/
-	void suspend() { enforce(SuspendThread(_handle) != -1); }
+	void suspend()
+	in { assert(associated); }
+	body { enforce(SuspendThread(_handle) != -1); }
 
 
 	/** Resumes thread.
@@ -82,7 +85,9 @@ struct Thread
 	$(HTTP msdn.microsoft.com/en-us/library/windows/desktop/ms685086(v=vs.85).aspx,
 	ResumeThread).
 	*/
-	void resume() { enforce(ResumeThread(_handle) != -1); }
+	void resume()
+	in { assert(associated); }
+	body { enforce(ResumeThread(_handle) != -1); }
 
 
 	/** Waits for thread's EIP to be fixed on $(D address) (e.g. because of a `JMP $-2;` loop).
@@ -90,6 +95,8 @@ struct Thread
 	It will resume the thread if it is suspended and then increase suspended count with the same value.
 	*/
 	void executeUntil(size_t address)
+	in { assert(associated); }
+	body
 	{
 		DWORD suspendCount = ResumeThread(_handle);
 		enforce(suspendCount != -1);
@@ -118,6 +125,8 @@ struct Thread
 	GetThreadContext).
 	*/
 	CONTEXT getContext(DWORD flags)
+	in { assert(associated); }
+	body
 	{
 		CONTEXT context;
 		context.ContextFlags = flags;
@@ -133,6 +142,8 @@ struct Thread
 	SetThreadContext).
 	*/
 	void setContext(CONTEXT context)
+	in { assert(associated); }
+	body
 	{
 		enforce(SetThreadContext(_handle, &context));
 	}
@@ -140,6 +151,8 @@ struct Thread
 	
 	/// Convenient function for changing thread context.
 	void changeContext(DWORD getFlags, scope void delegate(ref CONTEXT) del)
+	in { assert(associated); }
+	body
 	{
 		CONTEXT context = getContext(getFlags);
 		del(context);

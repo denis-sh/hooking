@@ -22,30 +22,6 @@ import hooking.windows.processmemory;
 import hooking.windows.processstartinfo;
 
 
-/** Returns whether $(D process) is _associated with a process.
-It is asserted that no member functions are called for an unassociated
-$(D Process) struct.
-
-Example:
----
-assert(Process.currentLocal.associated);
-assert(!Process.init.associated);
-auto h = Process.init.handle; // assert violation
----
-
-Bugs:
-The check is implemented as $(D Process) invariant and disabled because of $(BUGZILLA 7892).
-*/
-@property bool associated(in Process process) @safe pure nothrow
-{ return process._handle || process._processId; }
-
-unittest
-{
-	assert(Process.currentLocal.associated);
-	assert(!Process.init.associated);
-}
-
-
 version(unittest) Process testLaunch()
 {
 	return Process(ProcessStartInfo("notepad", null, true, true));
@@ -128,11 +104,6 @@ struct Process
 	}
 	
 
-	version(none) // invariant disabled because of @@@BUG7892@@@
-	invariant()
-	{ assert(this.associated, "Attempting to use unassociated Process struct"); }
-
-
 	/** Construct a $(D Process) from a $(D processId).
 	If $(D tryUsePseudoHandle) is $(D true) and $(D processId)
 	is current process id then pseudo handle with $(D PROCESS_ALL_ACCESS)
@@ -142,6 +113,8 @@ struct Process
 	Otherwise no handle is opened.
 	*/
 	this(DWORD processId, DWORD desiredAccess, bool tryUsePseudoHandle)
+	out { assert(associated); }
+	body
 	{
 		if(tryUsePseudoHandle && processId == GetCurrentProcessId())
 		{
@@ -171,6 +144,8 @@ struct Process
 	In this case calling $(D closeHandles) will result in unassociation of this struct.
 	*/
 	this(HANDLE processHandle, DWORD handleAccess, bool remainPseudoHandle)
+	out { assert(associated); }
+	body
 	{
 		immutable bool isPseudoHandle = processHandle == GetCurrentProcess();
 		if(!remainPseudoHandle && isPseudoHandle)
@@ -206,6 +181,8 @@ struct Process
 	---
 	*/
 	this(in ProcessStartInfo startInfo)
+	out { assert(associated); }
+	body
 	{
 		DWORD creationFlags = 0;
 		if(startInfo.suspended)
@@ -260,19 +237,46 @@ struct Process
 	}
 
 
+	/** Returns whether $(D process) is _associated with a process.
+	It is asserted that no member functions are called for an unassociated
+	$(D Process) struct.
+
+	Example:
+	---
+	assert(Process.currentLocal.associated);
+	assert(!Process.init.associated);
+	auto h = Process.init.handle; // assert violation
+	---
+
+	Bugs:
+	The check is implemented as $(D Process) invariant and disabled because of $(BUGZILLA 7892).
+	*/
+	@property bool associated() const @safe pure nothrow
+	{ return _handle || _processId; }
+
+	unittest
+	{
+		assert(Process.currentLocal.associated);
+		assert(!Process.init.associated);
+	}
+
+
 	/// Gets the native _handle.
 	@property HANDLE handle()
-	{ return _handle; }
+	in { assert(associated); }
+	body { return _handle; }
 
 
 	/// Gets access to the $(D handle).
 	@property DWORD handleAccess() const
-	{ return _handleAccess; }
+	in { assert(associated); }
+	body { return _handleAccess; }
 
 
 	/// Gets the process identifier.
 	@property DWORD processId() const
-	{ return _processId; }
+	in { assert(associated); }
+	body { return _processId; }
 
 
 	/** Gets the primary thread.
@@ -281,13 +285,18 @@ struct Process
 	The process is created with a constructor launching an executable file.
 	*/
 	@property Thread primaryThread()
-	in { assert(_primaryThread._handle); }
+	in 
+	{
+		assert(associated);
+		assert(_primaryThread._handle);
+	}
 	body { return _primaryThread; }
 
 
 	/// Gets associated $(D ProcessMemory) instance.
 	@property ProcessMemory memory()
-	{ return ProcessMemory(handle); }
+	in { assert(associated); }
+	body { return ProcessMemory(handle); }
 
 
 	/** Initializes internal Windows stuff required for WinAPI
@@ -321,6 +330,8 @@ struct Process
 	---
 	*/
 	void initializeWindowsStuff()
+	in { assert(associated); }
+	body
 	{
 		RemoteAddress entryPoint = getEntryPoint(_handle);
 
@@ -376,6 +387,8 @@ struct Process
 	---
 	*/
 	HMODULE[] getModules()
+	in { assert(associated); }
+	body
 	{
 		auto buff = helperEnumProcessModules(_handle);
 		scope(exit) processHeap.free(buff.ptr);
@@ -394,6 +407,8 @@ struct Process
 
 	/// Returns thread identifiers of all running threads in the process.
 	DWORD[] getThreadIds()
+	in { assert(associated); }
+	body
 	{
 		auto buff = helperNtQuerySystemInformation(SYSTEM_INFORMATION_CLASS.SystemProcessInformation, 0x20000);
 		scope(exit) processHeap.free(buff.ptr);
@@ -437,6 +452,8 @@ struct Process
 	$(RED Preconditions violation results in undefined behavior.)
 	*/
 	void loadDll(string dllName)
+	in { assert(associated); }
+	body
 	{
 		// Suspend thread and get its EIP
 		primaryThread.suspend();
@@ -480,12 +497,16 @@ struct Process
 	TerminateProcess).
 	*/
 	void terminate(uint exitCode = -1)
+	in { assert(associated); }
+	body
 	{
 		enforce(TerminateProcess(_handle, exitCode));
 	}
 
 	/// Waits for the process to exit and returns exit code.
 	int waitForExit()
+	in { assert(associated); }
+	body
 	{
 		enforce(WaitForSingleObject(_handle, INFINITE) == WAIT_OBJECT_0);
 		DWORD exitCode;
@@ -513,6 +534,8 @@ struct Process
 	it will wait infinite time (i.e. equals to $(D waitForExit())).
 	*/ 
 	bool waitForExit(Duration duration, out uint exitCode)
+	in { assert(associated); }
+	body
 	{
 		immutable ulong msecs = duration.total!"msecs"();
 		static assert(INFINITE == uint.max);
@@ -534,6 +557,8 @@ struct Process
 
 	/// ditto
 	bool waitForExit(Duration duration)
+	in { assert(associated); }
+	body
 	{
 		uint exitCode;
 		return waitForExit(duration, exitCode);

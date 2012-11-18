@@ -12,27 +12,6 @@ import core.sys.windows.windows;
 import std.exception;
 
 
-/** Returns whether $(D heap) is _associated with a heap handle.
-It is asserted that no member functions are called for an unassociated
-$(D Heap) struct.
-
-Example:
----
-assert(processHeap.associated);
-assert(!Heap.init.associated);
-auto h = Heap.init.handle; // assert violation
----
-*/
-@property bool associated(in Heap heap) @safe pure nothrow
-{ return !!heap._handle; }
-
-unittest
-{
-	static assert(!Heap.init.associated);
-	assert(processHeap.associated);
-}
-
-
 /// Returns default heap of the calling process.
 @property Heap processHeap()
 { return Heap(enforce(GetProcessHeap())); }
@@ -49,20 +28,40 @@ struct Heap
 	private HANDLE _handle;
 
 
-	invariant()
-	{ assert(this.associated, "Attempting to use unassociated Heap struct"); }
-
-
 	/// Construct a $(D Heap) from a $(D heapHandle).
 	this(HANDLE heapHandle)
+	out { assert(associated); }
+	body
 	{
 		_handle = heapHandle;
 	}
 
 
+	/** Returns whether $(D this) is _associated with a heap handle.
+	It is asserted that no member functions are called for an unassociated
+	$(D Heap) struct.
+
+	Example:
+	---
+	assert(processHeap.associated);
+	assert(!Heap.init.associated);
+	auto h = Heap.init.handle; // assert violation
+	---
+	*/
+	@property bool associated() const @safe pure nothrow
+	{ return !!_handle; }
+
+	unittest
+	{
+		static assert(!Heap.init.associated);
+		assert(processHeap.associated);
+	}
+
+
 	/// Gets the _handle of the associated process. 
 	@property HANDLE handle()
-	{ return _handle; }
+	in { assert(associated); }
+	body { return _handle; }
 
 
 	/** Allocates a block of memory.
@@ -75,6 +74,8 @@ struct Heap
 	$(D Exception) if memory allocation failed.
 	*/
 	T[] alloc(T = void)(size_t count, DWORD flags = 0)
+	in { assert(associated); }
+	body
 	{
 		return enforce(cast(T*) HeapAlloc(_handle, flags, countToBytes(T.sizeof, count)))[0 .. count];
 	}
@@ -92,6 +93,8 @@ struct Heap
 	$(D Exception) if memory reallocation failed.
 	*/
 	void realloc(T)(ref T[] array, size_t newCount, DWORD flags = 0)
+	in { assert(associated); }
+	body
 	{
 		array = array ?
 			enforce(cast(T*) HeapReAlloc(_handle, flags, array.ptr, countToBytes(T.sizeof, newCount)))[0 .. newCount]
@@ -128,6 +131,8 @@ struct Heap
 	---
 	*/
 	void destructiveRealloc(T)(ref T[] array, size_t newCount)
+	in { assert(associated); }
+	body
 	{
 		immutable size_t newBytes = countToBytes(T.sizeof, newCount);
 		if(!array)
@@ -154,6 +159,8 @@ struct Heap
 	$(D Exception) if memory freeing failed.
 	*/
 	void free(void* p, DWORD flags = 0)
+	in { assert(associated); }
+	body
 	{
 		BOOL res = HeapFree(_handle, flags, p);
 		// Workaround bug mentioned in "Community Additions" section of

@@ -19,26 +19,6 @@ static assert(size_t.sizeof == 4);
 
 alias size_t RemoteAddress;
 
-/** Returns whether $(D memory) is _associated with a process handle.
-It is asserted that no member functions are called for an unassociated
-$(D ProcessMemory) struct.
-
-Example:
----
-assert(ProcessMemory.current.associated);
-assert(!ProcessMemory.init.associated);
-auto h = ProcessMemory.init.processHandle; // assert violation
----
-*/
-@property bool associated(in ProcessMemory memory) @safe pure nothrow
-{ return !!memory._processHandle; }
-
-unittest
-{
-	assert(ProcessMemory.current.associated);
-	assert(!ProcessMemory.init.associated);
-}
-
 
 /** This struct encapsulates process memory manipulation functionality.
 */
@@ -57,23 +37,42 @@ struct ProcessMemory
 	private HANDLE _processHandle;
 
 
-	invariant()
-	{ assert(this.associated, "Attempting to use unassociated ProcessMemory struct"); }
-
-
 	@disable this();
 
 
 	/// Construct a $(D ProcessMemory) from a $(D processHandle).
 	this(HANDLE processHandle)
+	out { assert(associated); }
+	body
 	{
 		this._processHandle = processHandle;
+	}
+
+	/** Returns whether $(D this) is _associated with a process handle.
+	It is asserted that no member functions are called for an unassociated
+	$(D ProcessMemory) struct.
+
+	Example:
+	---
+	assert(ProcessMemory.current.associated);
+	assert(!ProcessMemory.init.associated);
+	auto h = ProcessMemory.init.processHandle; // assert violation
+	---
+	*/
+	@property bool associated() const @safe pure nothrow
+	{ return !!_processHandle; }
+
+	unittest
+	{
+		assert(ProcessMemory.current.associated);
+		assert(!ProcessMemory.init.associated);
 	}
 
 
 	/// Gets the handle of the associated process. 
 	@property HANDLE processHandle()
-	{ return _processHandle; }
+	in { assert(associated); }
+	body { return _processHandle; }
 
 
 	/** Set access protection of the specified memory region to $(D newProtection).
@@ -83,7 +82,11 @@ struct ProcessMemory
 	$(D newProtection) is a valid memory protection.
 	*/
 	DWORD changeProtection(RemoteAddress address, size_t size, DWORD newProtection)
-	in { assert(isValidMemoryProtection(newProtection)); }
+	in
+	{
+		assert(associated);
+		assert(isValidMemoryProtection(newProtection));
+	}
 	body
 	{
 		DWORD oldProtection;
@@ -113,7 +116,11 @@ struct ProcessMemory
 	---
 	*/
 	void read(RemoteAddress baseAddress, void[] buff)
-	in { assert(buff.length); }
+	in
+	{
+		assert(associated);
+		assert(buff.length);
+	}
 	body
 	{
 		enforce(ReadProcessMemory(_processHandle, cast(LPCVOID) baseAddress, buff.ptr, buff.length, null));
@@ -152,6 +159,8 @@ struct ProcessMemory
 	---
 	*/
 	T get(T)(RemoteAddress baseAddress)
+	in { assert(associated); }
+	body
 	{
 		T res = void;
 		read(baseAddress, (cast(void*) &res)[0 .. T.sizeof]);
@@ -189,7 +198,11 @@ struct ProcessMemory
 	---
 	*/
 	void write(RemoteAddress baseAddress, in void[] buff, bool flushInstructionCache = false)
-	in { assert(buff.length); }
+	in
+	{
+		assert(associated);
+		assert(buff.length);
+	}
 	body
 	{
 		enforce(WriteProcessMemory(_processHandle, cast(LPVOID) baseAddress, buff.ptr, buff.length, null));
