@@ -142,7 +142,7 @@ struct Process
 
 	$(D processId) will not be set iff resulting $(D handleAccess)
 	doesn't include $(D PROCESS_QUERY_INFORMATION) or $(D PROCESS_QUERY_LIMITED_INFORMATION).
-	In this case calling $(D closeHandles) will result in unassociation of this struct.
+	In this case calling $(D closeHandle) will result in unassociation of this struct.
 	*/
 	this(HANDLE processHandle, DWORD handleAccess, bool remainPseudoHandle)
 	out { assert(associated); }
@@ -248,7 +248,7 @@ struct Process
 	~this()
 	{
 		if(associated)
-			closeHandles();
+			closeHandle();
 	}
 
 
@@ -587,9 +587,9 @@ struct Process
 	}
 
 
-	/** Closes native handles if any.
+	/** Closes native handle if any.
 	*/
-	void closeHandles()
+	void closeHandle()
 	in { assert(associated); }
 	body
 	{
@@ -603,10 +603,10 @@ struct Process
 	unittest
 	{
 		auto local = Process.currentLocal;
-		local.closeHandles();
+		local.closeHandle();
 
 		auto global = Process.getCurrentGlobal();
-		global.closeHandles();
+		global.closeHandle();
 	}
 }
 
