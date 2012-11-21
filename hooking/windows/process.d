@@ -22,15 +22,9 @@ import hooking.windows.processmemory;
 import hooking.windows.processstartinfo;
 
 
-version(unittest) Process testLaunch(out Thread primaryThread)
-{
-	return Process(ProcessStartInfo("notepad", null, true, true), primaryThread);
-}
-
 version(unittest) Process testLaunch()
 {
-	auto primaryThread = Thread.init;
-	return testLaunch(primaryThread);
+	return Process(ProcessStartInfo("notepad", null, true, true));
 }
 
 
@@ -357,10 +351,19 @@ struct Process
 		enforce(memory.changeProtection(entryPoint, loopCode.length, oldProtection) == PAGE_EXECUTE_READWRITE);
 	}
 
+	/// ditto
+	void initializeWindowsStuff()
+	in { assert(associated); }
+	body
+	{
+		auto threadIds = getThreadIds();
+		assert(threadIds.length == 1);
+		initializeWindowsStuff(Thread(threadIds[0], THREAD_ALL_ACCESS, false));
+	}
+
 	unittest
 	{
-		auto primaryThread = Thread.init;
-		auto p = testLaunch(primaryThread);
+		auto p = testLaunch();
 		scope(exit) p.terminate();
 
 		HMODULE[256] buff;
@@ -369,7 +372,7 @@ struct Process
 		// The call will fail because internal Windows stuff isn't initialized yet:
 		assert(!EnumProcessModules(p.handle, buff.ptr, buff.sizeof, &needed));
 
-		p.initializeWindowsStuff(primaryThread);
+		p.initializeWindowsStuff();
 
 		assert(EnumProcessModules(p.handle, buff.ptr, buff.sizeof, &needed));
 	}
@@ -403,11 +406,10 @@ struct Process
 
 	unittest
 	{
-		auto primaryThread = Thread.init;
-		auto p = testLaunch(primaryThread);
+		auto p = testLaunch();
 		scope(exit) p.terminate();
 
-		p.initializeWindowsStuff(primaryThread);
+		p.initializeWindowsStuff();
 		assert(p.getModules().length > 1);
 	}
 
