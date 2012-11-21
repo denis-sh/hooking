@@ -22,9 +22,15 @@ import hooking.windows.processmemory;
 import hooking.windows.processstartinfo;
 
 
+version(unittest) Process testLaunch(out Thread primaryThread)
+{
+	return Process(ProcessStartInfo("notepad", null, true, true), primaryThread);
+}
+
 version(unittest) Process testLaunch()
 {
-	return Process(ProcessStartInfo("notepad", null, true, true));
+	auto primaryThread = Thread.init;
+	return testLaunch(primaryThread);
 }
 
 
@@ -98,7 +104,6 @@ struct Process
 		HANDLE _handle;
 		DWORD _handleAccess;
 		DWORD _processId;
-		Thread _primaryThread;
 	}
 
 
@@ -129,7 +134,6 @@ struct Process
 			_handleAccess = desiredAccess;
 		}
 		_processId = processId;
-		_primaryThread = Thread.init;
 	}
 
 
@@ -159,7 +163,6 @@ struct Process
 			_handleAccess = isPseudoHandle ? PROCESS_ALL_ACCESS : handleAccess;
 			if(_handleAccess & (PROCESS_QUERY_INFORMATION  | PROCESS_QUERY_LIMITED_INFORMATION))
 				_processId = enforce(GetProcessId(processHandle));
-			_primaryThread = Thread.init;
 		}
 	}
 
@@ -184,7 +187,7 @@ struct Process
 	{ Process(ProcessStartInfo('"' ~ path ~ '"')); } // using command line
 	---
 	*/
-	this(in ProcessStartInfo startInfo)
+	this(in ProcessStartInfo startInfo, out Thread primaryThread)
 	out { assert(associated); }
 	body
 	{
@@ -202,15 +205,23 @@ struct Process
 		_handle = info.hProcess;
 		_handleAccess = PROCESS_ALL_ACCESS;
 		_processId = info.dwProcessId;
-		_primaryThread._handle = info.hThread;
-		_primaryThread._threadId = info.dwThreadId;
+		primaryThread._handle = info.hThread;
+		primaryThread._threadId = info.dwThreadId;
+	}
+
+	/// ditto
+	this(in ProcessStartInfo startInfo)
+	{
+		Thread primaryThread = Thread.init;
+		this(startInfo, primaryThread);
 	}
 
 	unittest
 	{
-		auto p = Process(ProcessStartInfo("cmd /c echo Hello!", true, true, true));
+		auto primaryThread = Thread.init;
+		auto p = Process(ProcessStartInfo("cmd /c echo Hello!", true, true, true), primaryThread);
 		assert(p.handleAccess == PROCESS_ALL_ACCESS);
-		assert(p.primaryThread.threadId);
+		assert(primaryThread.threadId);
 		p.terminate();
 	}
 
@@ -288,20 +299,6 @@ struct Process
 	body { return _processId; }
 
 
-	/** Gets the primary thread.
-
-	Preconditions:
-	The process is created with a constructor launching an executable file.
-	*/
-	@property ref Thread primaryThread()
-	in 
-	{
-		assert(associated);
-		assert(_primaryThread._handle);
-	}
-	body { return _primaryThread; }
-
-
 	/// Gets associated $(D ProcessMemory) instance.
 	@property ProcessMemory memory()
 	in { assert(associated); }
@@ -337,7 +334,7 @@ struct Process
 	assert(EnumProcessModules(p.handle, buff.ptr, buff.sizeof, &needed));
 	---
 	*/
-	void initializeWindowsStuff()
+	void initializeWindowsStuff(ref Thread primaryThread)
 	in { assert(associated); }
 	body
 	{
@@ -361,7 +358,8 @@ struct Process
 
 	unittest
 	{
-		auto p = testLaunch();
+		auto primaryThread = Thread.init;
+		auto p = testLaunch(primaryThread);
 		scope(exit) p.terminate();
 
 		HMODULE[256] buff;
@@ -370,7 +368,7 @@ struct Process
 		// The call will fail because internal Windows stuff isn't initialized yet:
 		assert(!EnumProcessModules(p.handle, buff.ptr, buff.sizeof, &needed));
 
-		p.initializeWindowsStuff();
+		p.initializeWindowsStuff(primaryThread);
 
 		assert(EnumProcessModules(p.handle, buff.ptr, buff.sizeof, &needed));
 	}
@@ -404,10 +402,11 @@ struct Process
 
 	unittest
 	{
-		auto p = testLaunch();
+		auto primaryThread = Thread.init;
+		auto p = testLaunch(primaryThread);
 		scope(exit) p.terminate();
 
-		p.initializeWindowsStuff();
+		p.initializeWindowsStuff(primaryThread);
 		assert(p.getModules().length > 1);
 	}
 
@@ -458,13 +457,13 @@ struct Process
 	Initialized internal Windows stuff.
 	$(RED Preconditions violation results in undefined behavior.)
 	*/
-	void loadDll(string dllName)
+	void loadDll(ref Thread thread, string dllName)
 	in { assert(associated); }
 	body
 	{
 		// Suspend thread and get its EIP
-		primaryThread.suspend();
-		RemoteAddress address = primaryThread.getContext(CONTEXT_CONTROL).Eip;
+		thread.suspend();
+		RemoteAddress address = thread.getContext(CONTEXT_CONTROL).Eip;
 
 		ubyte[5 + 2] newCode = cast(const(ubyte)[]) x"E9 00000000 EB FE"; // JMP rel32; JMP $-2;
 
@@ -481,7 +480,7 @@ struct Process
 
 		// Load our DLL
 		memory.write(address, newCode, true);
-		primaryThread.executeUntil(address + newCode.length - 2);
+		thread.executeUntil(address + newCode.length - 2);
 
 		// Free remote memory
 		enforce(VirtualFreeEx(_handle, cast(void*) remotePtr, 0, MEM_RELEASE));
@@ -493,8 +492,8 @@ struct Process
 		enforce(memory.changeProtection(address, originCode.length, oldProtection) == PAGE_EXECUTE_READWRITE);
 
 		// Restore EIP and resume thread
-		primaryThread.changeContext(CONTEXT_CONTROL, (ref context) { context.Eip = address; });
-		primaryThread.resume();
+		thread.changeContext(CONTEXT_CONTROL, (ref context) { context.Eip = address; });
+		thread.resume();
 	}
 
 	/** Terminates the process and set its exit code with $(D exitCode).
@@ -596,8 +595,6 @@ struct Process
 			enforce(CloseHandle(_handle));
 			_handle = null;
 		}
-		if(_primaryThread.associated)
-			_primaryThread.closeHandle();
 	}
 
 	unittest

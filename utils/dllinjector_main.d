@@ -15,6 +15,7 @@ import std.range: empty;
 import std.stdio: stderr;
 import std.conv: emplace;
 
+import hooking.windows.thread;
 import hooking.windows.process;
 import hooking.windows.processstartinfo;
 
@@ -49,21 +50,22 @@ int main(string[] args)
 	Process process = void;
 	auto processStartInfo = ProcessStartInfo("x " ~ fileArgs, false, true);
 	processStartInfo.file = file;
-	if(auto e = collectException(emplace(&process, processStartInfo)))
+	Thread primaryThread = Thread.init;
+	if(auto e = collectException(emplace(&process, processStartInfo, primaryThread)))
 	{
 		stderr.writefln("Process launching failure: %s", e.msg);
 		return ExitCodes.processLaunchingFailure;
 	}
 
-	process.initializeWindowsStuff();
+	process.initializeWindowsStuff(primaryThread);
 
-	if(auto e = collectException(process.loadDll(dll)))
+	if(auto e = collectException(process.loadDll(primaryThread, dll)))
 	{
 		stderr.writefln("DLL loading failure: %s", e.msg);
 		return ExitCodes.dllLoadingFailure; // FIXME or other failure?
 	}
 
-	process.primaryThread.resume();
+	primaryThread.resume();
 
 	if(wait)
 		if(int exitCode = process.waitForExit())
