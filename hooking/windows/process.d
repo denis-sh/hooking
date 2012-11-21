@@ -42,7 +42,6 @@ struct Process
 	unittest
 	{
 		auto local = Process.currentLocal;
-		local.closeHandles();
 	}
 
 
@@ -55,7 +54,6 @@ struct Process
 	unittest
 	{
 		auto global = Process.getCurrentGlobal();
-		global.closeHandles();
 	}
 
 
@@ -177,13 +175,13 @@ struct Process
 	Example:
 	---
 	// With executable file searching:
-	Process(ProcessStartInfo("notepad", true)).closeHandles();
+	{ Process(ProcessStartInfo("notepad", true)); }
 
 	// Without executable file searching:
 	import std.process;
 	immutable path = environment["windir"] ~ `\system32\notepad.exe`;
-	Process(ProcessStartInfo(path, null)).closeHandles(); // using file & arguments
-	Process(ProcessStartInfo('"' ~ path ~ '"')).closeHandles(); // using command line
+	{ Process(ProcessStartInfo(path, null)); } // using file & arguments
+	{ Process(ProcessStartInfo('"' ~ path ~ '"')); } // using command line
 	---
 	*/
 	this(in ProcessStartInfo startInfo)
@@ -213,7 +211,6 @@ struct Process
 		auto p = Process(ProcessStartInfo("cmd /c echo Hello!", true, true, true));
 		assert(p.handleAccess == PROCESS_ALL_ACCESS);
 		assert(p.primaryThread.threadId);
-		scope(exit) p.closeHandles();
 		p.terminate();
 	}
 
@@ -230,7 +227,6 @@ struct Process
 		void assertLaunchs(string commandLine, bool search)
 		{
 			auto p = Process(ProcessStartInfo(commandLine, search, true));
-			scope(exit) p.closeHandles();
 			p.terminate();
 		}
 
@@ -240,6 +236,13 @@ struct Process
 		assertLaunchs('"' ~ pathNoExt ~ `.exe" 1`, false);
 		assertLaunchs(pathNoExt, true);
 		assertLaunchs("cmd", true);
+	}
+
+
+	~this()
+	{
+		if(associated)
+			closeHandles();
 	}
 
 
@@ -321,7 +324,6 @@ struct Process
 	---
 	import std.process;
 	auto p = Process(environment["windir"] ~ `\system32\notepad.exe`, null, true);
-	scope(exit) p.closeHandles();
 	scope(exit) p.terminate();
 
 	HMODULE[256] buff;
@@ -360,7 +362,7 @@ struct Process
 	unittest
 	{
 		auto p = testLaunch();
-		scope(exit) p.terminate(), p.closeHandles();
+		scope(exit) p.terminate();
 
 		HMODULE[256] buff;
 		DWORD needed;
@@ -385,7 +387,6 @@ struct Process
 	---
 	import std.process: environment;
 	auto p = Process(environment["windir"] ~ `\system32\notepad.exe`, null, true);
-	scope(exit) p.closeHandles();
 	scope(exit) p.terminate();
 
 	p.initializeWindowsStuff();
@@ -404,7 +405,7 @@ struct Process
 	unittest
 	{
 		auto p = testLaunch();
-		scope(exit) p.terminate(), p.closeHandles();
+		scope(exit) p.terminate();
 
 		p.initializeWindowsStuff();
 		assert(p.getModules().length > 1);
@@ -445,7 +446,7 @@ struct Process
 	unittest
 	{
 		auto p = testLaunch();
-		scope(exit) p.terminate(), p.closeHandles();
+		scope(exit) p.terminate();
 
 		assert(p.getThreadIds().length == 1);
 	}
@@ -524,7 +525,6 @@ struct Process
 	unittest
 	{
 		auto p = testLaunch();
-		scope(exit) p.closeHandles();
 
 		p.terminate(-3);
 		assert(p.waitForExit() == -3);
@@ -573,7 +573,6 @@ struct Process
 	unittest
 	{
 		auto p = testLaunch();
-		scope(exit) p.closeHandles();
 		uint exitCode;
 
 		assert(!p.waitForExit(dur!"msecs"(1), exitCode) && exitCode == 0);
@@ -584,32 +583,31 @@ struct Process
 		assert(p.waitForExit(dur!"msecs"( 1), exitCode) && exitCode == -2);
 		assert(p.waitForExit(dur!"days" (50), exitCode) && exitCode == -2);
 	}
-}
 
 
-/** Closes $(D process) handles if any.
-$(D process) may be unassociated.
-*/
-void closeHandles(ref Process process)
-{
-	if(process._handle && process._handle != GetCurrentProcess())
+	/** Closes native handles if any.
+	*/
+	void closeHandles()
+	in { assert(associated); }
+	body
 	{
-		enforce(CloseHandle(process._handle));
-		process._handle = null;
+		if(_handle && _handle != GetCurrentProcess())
+		{
+			enforce(CloseHandle(_handle));
+			_handle = null;
+		}
+		if(_primaryThread.associated)
+			_primaryThread.closeHandle();
 	}
-	process._primaryThread.closeHandle();
-}
 
-unittest
-{
-	auto unassociated = Process.init;
-	unassociated.closeHandles();
+	unittest
+	{
+		auto local = Process.currentLocal;
+		local.closeHandles();
 
-	auto local = Process.currentLocal;
-	local.closeHandles();
-
-	auto global = Process.getCurrentGlobal();
-	global.closeHandles();
+		auto global = Process.getCurrentGlobal();
+		global.closeHandles();
+	}
 }
 
 

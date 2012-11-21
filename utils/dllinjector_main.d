@@ -54,7 +54,6 @@ int main(string[] args)
 		stderr.writefln("Process launching failure: %s", e.msg);
 		return ExitCodes.processLaunchingFailure;
 	}
-	scope(exit) process.closeHandles();
 
 	process.initializeWindowsStuff();
 

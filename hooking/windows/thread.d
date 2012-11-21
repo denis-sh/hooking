@@ -35,6 +35,13 @@ struct Thread
 	}
 
 
+	~this()
+	{
+		if(associated)
+			closeHandle();
+	}
+
+
 	/** Returns whether $(D this) is _associated with a thread.
 	It is asserted that no member functions are called for an unassociated
 	$(D Thread) struct.
@@ -162,18 +169,19 @@ struct Thread
 		del(context);
 		setContext(context);
 	}
-}
 
 
-/** Closes $(D thread) handle if any.
-$(D thread) may be unassociated.
-*/
-void closeHandle(ref Thread thread)
-{
-	if(thread._handle)
+	/** Closes native handle if any.
+	*/
+	void closeHandle()
+	in { assert(associated); }
+	body
 	{
-		enforce(CloseHandle(thread._handle));
-		thread._handle = null;
+		if(_handle)
+		{
+			enforce(CloseHandle(_handle));
+			_handle = null;
+		}
 	}
 }
 
