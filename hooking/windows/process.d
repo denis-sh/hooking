@@ -206,6 +206,7 @@ struct Process
 		_handleAccess = PROCESS_ALL_ACCESS;
 		_processId = info.dwProcessId;
 		primaryThread._handle = info.hThread;
+		primaryThread._handleAccess = THREAD_ALL_ACCESS;
 		primaryThread._threadId = info.dwThreadId;
 	}
 

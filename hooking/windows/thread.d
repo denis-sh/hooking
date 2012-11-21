@@ -17,12 +17,48 @@ import std.exception;
 */
 struct Thread
 {
-	package HANDLE _handle;
-	package DWORD _threadId;
+	package
+	{
+		HANDLE _handle;
+		DWORD _handleAccess;
+		DWORD _threadId;
+	}
 
 
 	@disable this();
 	@disable this(this);
+
+
+	/** Construct a $(D Thread) from a $(D threadId).
+	If $(D tryUsePseudoHandle) is $(D true) and $(D threadId)
+	is current thread id then pseudo handle with $(D THREAD_ALL_ACCESS)
+	access will be used.
+	Otherwise if $(D desiredAccess) is non-zero then a thread handle
+	will be opened with requested access.
+	Otherwise no handle is opened.
+	*/
+	this(DWORD threadId, DWORD desiredAccess, bool tryUsePseudoHandle)
+	out { assert(associated); }
+	body
+	{
+		if(tryUsePseudoHandle && threadId == GetCurrentThreadId())
+		{
+			_handle = GetCurrentThread();
+			_handleAccess = THREAD_ALL_ACCESS;
+		}
+		else if(desiredAccess)
+		{
+			_handle = enforce(OpenThread(desiredAccess, TRUE /* bInheritHandle */, threadId));
+			_handleAccess = desiredAccess;
+		}
+		_threadId = threadId;
+	}
+
+	unittest
+	{
+		assert(Thread(GetCurrentThreadId(), 0, true).handle == GetCurrentThread());
+		assert(!Thread(GetCurrentThreadId(), 0, false).handle);
+	}
 
 
 	/// Construct a $(D Thread) from a $(D threadHandle).
@@ -65,6 +101,12 @@ struct Thread
 	@property HANDLE handle()
 	in { assert(associated); }
 	body { return _handle; }
+
+
+	/// Gets access to the $(D handle).
+	@property DWORD handleAccess() const
+	in { assert(associated); }
+	body { return _handleAccess; }
 
 
 	/// Gets the thread identifier.
@@ -177,12 +219,31 @@ struct Thread
 	in { assert(associated); }
 	body
 	{
-		if(_handle)
+		if(_handle && _handle != GetCurrentThread())
 		{
 			enforce(CloseHandle(_handle));
 			_handle = null;
 		}
 	}
+}
+
+
+enum : DWORD
+{
+	THREAD_TERMINATE                 = 0x0001,  
+	THREAD_SUSPEND_RESUME            = 0x0002,  
+	THREAD_GET_CONTEXT               = 0x0008,  
+	THREAD_SET_CONTEXT               = 0x0010,  
+	THREAD_QUERY_INFORMATION         = 0x0040,  
+	THREAD_SET_INFORMATION           = 0x0020,  
+	THREAD_SET_THREAD_TOKEN          = 0x0080,
+	THREAD_IMPERSONATE               = 0x0100,
+	THREAD_DIRECT_IMPERSONATION      = 0x0200,
+
+	THREAD_SET_LIMITED_INFORMATION   = 0x0400,
+	THREAD_QUERY_LIMITED_INFORMATION = 0x0800,
+
+	THREAD_ALL_ACCESS        = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x3FF
 }
 
 
@@ -229,4 +290,13 @@ DWORD getThreadOrProcessIdOfThread(HANDLE threadHandle, bool returnProcessId) no
 		assert(returnLength == tbi.sizeof);
 		return cast(DWORD) (returnProcessId ? tbi.ClientId.UniqueProcess : tbi.ClientId.UniqueThread);
 	}
+}
+
+
+// WinAPI
+// --------------------------------------------------
+
+extern(Windows) nothrow
+{
+    extern HANDLE OpenThread(DWORD dwDesiredAccess, BOOL bInheritHandle, DWORD dwThreadId);
 }
