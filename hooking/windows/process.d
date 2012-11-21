@@ -262,9 +262,6 @@ struct Process
 	assert(!Process.init.associated);
 	auto h = Process.init.handle; // assert violation
 	---
-
-	Bugs:
-	The check is implemented as $(D Process) invariant and disabled because of $(BUGZILLA 7892).
 	*/
 	@property bool associated() const @safe pure nothrow
 	{ return _handle || _processId; }
