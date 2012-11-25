@@ -101,6 +101,15 @@ struct Process
 	}
 
 
+	private void checkAccess(DWORD requiredAccess, string func)
+	{
+		if(cast(ubyte) GetVersion() < 6 && (requiredAccess & PROCESS_QUERY_LIMITED_INFORMATION))
+			requiredAccess = requiredAccess & ~PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_QUERY_INFORMATION;
+		enforce((_handleAccess & requiredAccess) == requiredAccess,
+			xformat("Insufficient process handle access to call '%s'", func));
+	}
+
+
 	@disable this();
 	@disable this(this);
 
@@ -112,6 +121,9 @@ struct Process
 	Otherwise if $(D desiredAccess) is non-zero then a process handle
 	will be opened with requested access.
 	Otherwise no handle is opened.
+	In the latter case for each member function with "Required handle access"
+	paragraph in documentation call a temporary handle with required access is
+	opened.
 	*/
 	this(DWORD processId, DWORD desiredAccess, bool tryUsePseudoHandle)
 	out { assert(associated); }
@@ -299,11 +311,15 @@ struct Process
 
 	/** Determines whether this process is running under $(HTTP
 	msdn.microsoft.com/en-us/library/windows/desktop/aa384249(v=vs.85).aspx, WOW64).
+
+	Required handle access:
+	$(D PROCESS_QUERY_INFORMATION)
 	*/
 	@property bool isWOW64()
 	in { assert(associated); }
 	body
 	{
+		mixin(requireAccess(q{PROCESS_QUERY_INFORMATION}, "isWOW64"));
 		if(!hasWOW64)
 			return false;
 		BOOL res;
@@ -323,6 +339,9 @@ struct Process
 	before initialization is finished (before module entry point is reached
 	in current implementation).
 	$(RED Preconditions violation results in undefined behavior.)
+
+	Required handle access:
+	$(D PROCESS_QUERY_INFORMATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION)
 
 	Example:
 	---
@@ -345,6 +364,8 @@ struct Process
 	in { assert(associated); }
 	body
 	{
+		mixin(requireAccess(q{PROCESS_QUERY_INFORMATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION}, "initializeWindowsStuff(primaryThread)"));
+
 		RemoteAddress entryPoint = getEntryPoint(_handle);
 
 		enum loopCode = x"EB FE"; // JMP $-2
@@ -397,6 +418,9 @@ struct Process
 	No DLL are loaded/unloaded during function call.
 	$(RED Preconditions violation results in undefined behavior.)
 
+	Required handle access:
+	$(D PROCESS_QUERY_INFORMATION | PROCESS_VM_READ)
+
 	Example:
 	---
 	import std.process: environment;
@@ -411,6 +435,9 @@ struct Process
 	in { assert(associated); }
 	body
 	{
+		// Note: required handle access is not documented in MSDN.
+		mixin(requireAccess(q{PROCESS_QUERY_INFORMATION | PROCESS_VM_READ}, "getModules()"));
+
 		auto buff = helperEnumProcessModules(_handle);
 		scope(exit) processHeap.free(buff.ptr);
 		return buff.dup;
@@ -426,7 +453,11 @@ struct Process
 	}
 
 
-	/// Returns thread identifiers of all running threads in the process.
+	/** Returns thread identifiers of all running threads in the process.
+
+	Required handle access:
+	$(D PROCESS_QUERY_INFORMATION | PROCESS_VM_READ)
+	*/
 	DWORD[] getThreadIds()
 	in { assert(associated); }
 	body
@@ -471,11 +502,16 @@ struct Process
 	Preconditions:
 	Initialized internal Windows stuff.
 	$(RED Preconditions violation results in undefined behavior.)
+
+	Required handle access:
+	$(D PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION)
 	*/
 	void loadDll(ref Thread thread, string dllName)
 	in { assert(associated); }
 	body
 	{
+		mixin(requireAccess(q{PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION}, "loadDll(thread, dllName)"));
+
 		// Suspend thread and get its EIP
 		thread.suspend();
 		RemoteAddress address = thread.getContext(CONTEXT_CONTROL).Eip;
@@ -516,19 +552,28 @@ struct Process
 	Calls
 	$(HTTP msdn.microsoft.com/en-us/library/windows/desktop/ms686714(v=vs.85).aspx,
 	TerminateProcess).
+
+	Required handle access:
+	$(D PROCESS_TERMINATE)
 	*/
 	void terminate(uint exitCode = -1)
 	in { assert(associated); }
 	body
 	{
+		mixin(requireAccess(q{PROCESS_TERMINATE}, "terminate(exitCode)"));
 		enforce(TerminateProcess(_handle, exitCode));
 	}
 
-	/// Waits for the process to exit and returns exit code.
+	/** Waits for the process to exit and returns exit code.
+
+	Required handle access:
+	$(D SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION)
+	*/
 	int waitForExit()
 	in { assert(associated); }
 	body
 	{
+		mixin(requireAccess(q{SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION }, "waitForExit()"));
 		enforce(WaitForSingleObject(_handle, INFINITE) == WAIT_OBJECT_0);
 		DWORD exitCode;
 		enforce(GetExitCodeProcess(_handle, &exitCode));
@@ -549,6 +594,9 @@ struct Process
 	and returns wheter it exited. If it does exited, set $(D exitCode)
 	with the process exit code.
 
+	Required handle access:
+	$(D SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION)
+
 	Bugs:
 	If total milliseconds in duration >= $(D uint.max) (more than 49 days)
 	it will wait infinite time (i.e. equals to $(D waitForExit())).
@@ -557,6 +605,8 @@ struct Process
 	in { assert(associated); }
 	body
 	{
+		mixin(requireAccess(q{SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION }, "waitForExit(duration, exitCode)"));
+
 		immutable ulong msecs = duration.total!"msecs"();
 		static assert(INFINITE == uint.max);
 		if(msecs >= uint.max)
@@ -640,6 +690,15 @@ enum : DWORD
 	PROCESS_QUERY_LIMITED_INFORMATION  = 0x1000,
 
 	PROCESS_ALL_ACCESS        = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0xFFF
+}
+
+
+private string requireAccess(string requiredAccess, string func)
+{
+	return xformat(q{
+		if(_handle) checkAccess(%s, q{%s});
+		else return Process(_processId, %1$s, true).%2$s;
+	}, requiredAccess, func);
 }
 
 
