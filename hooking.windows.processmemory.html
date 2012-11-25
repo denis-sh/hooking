@@ -142,20 +142,6 @@
 </dd>
 <dt>Authors</dt><dd>Denis Shelomovskij</dd>
 </dl>
-<hr><div class="row-fluid declaration"><h3><a name="associated"></a>pure nothrow @property @safe bool <span class="symbol-target" id="associated">&nbsp;</span><a class="symbol-link" href="#associated">associated</a>(in ProcessMemory <i>memory</i>);
-</h3></div>
-<div class="declaration-content"><dl><p>Returns whether <span class="inlinecode"><i>memory</i></span> is associated with a process handle.
-It is asserted that no member functions are called for an unassociated
-<span class="inlinecode">ProcessMemory</span> struct.
-</p>
-<dt>Example:</dt><dd>
-<pre class="d_code"><span class="d_keyword">assert</span>(ProcessMemory.current.<u>associated</u>);
-<span class="d_keyword">assert</span>(!ProcessMemory.init.<u>associated</u>);
-<span class="d_keyword">auto</span> h = ProcessMemory.init.processHandle; <span class="d_comment">// assert violation
-</span></pre>
-</dd>
-</dl>
-</div>
 <hr><div class="row-fluid declaration"><h3><a name="ProcessMemory"></a>struct <span class="symbol-target" id="ProcessMemory">&nbsp;</span><a class="symbol-link" href="#ProcessMemory">ProcessMemory</a>;
 </h3></div>
 <div class="declaration-content"><dl><p>This struct encapsulates process memory manipulation functionality.</p>
@@ -168,6 +154,20 @@ It is asserted that no member functions are called for an unassociated
 <hr><div class="row-fluid declaration"><h3><a name="ProcessMemory.this"></a> this(HANDLE <i>processHandle</i>);
 </h3></div>
 <div class="declaration-content"><dl><p>Construct a <span class="inlinecode">ProcessMemory</span> from a <span class="inlinecode"><i>processHandle</i></span>.</p>
+</dl>
+</div>
+<hr><div class="row-fluid declaration"><h3><a name="ProcessMemory.associated"></a>const pure nothrow @property @safe bool <span class="symbol-target" id="associated">&nbsp;</span><a class="symbol-link" href="#associated">associated</a>();
+</h3></div>
+<div class="declaration-content"><dl><p>Returns whether <span class="inlinecode">this</span> is associated with a process handle.
+	It is asserted that no member functions are called for an unassociated
+	<span class="inlinecode">ProcessMemory</span> struct.
+</p>
+<dt>Example:</dt><dd>
+<pre class="d_code">	<span class="d_keyword">assert</span>(ProcessMemory.current.<u>associated</u>);
+	<span class="d_keyword">assert</span>(!ProcessMemory.init.<u>associated</u>);
+	<span class="d_keyword">auto</span> h = ProcessMemory.init.processHandle; <span class="d_comment">// assert violation
+</span></pre>
+</dd>
 </dl>
 </div>
 <hr><div class="row-fluid declaration"><h3><a name="ProcessMemory.processHandle"></a>@property HANDLE <span class="symbol-target" id="processHandle">&nbsp;</span><a class="symbol-link" href="#processHandle">processHandle</a>();
