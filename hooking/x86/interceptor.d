@@ -19,9 +19,11 @@ static assert(size_t.sizeof == 4);
 
 enum pushedBytes = 36;
 
-void nakedHelper(alias callTarget, size_t jmpTarget, string originCode)() {
+void nakedHelper(alias callTarget, size_t jmpTarget, string originCode)()
+{
 	mixin(xformat(`
-	asm {
+	asm
+	{
 		naked;
 		pushad;
 		pushfd;
@@ -59,9 +61,11 @@ void insertCall(alias f, size_t address, string originCode)()
 
 import std.traits;
 
-void naked2() nothrow {
+void naked2() nothrow
+{
 	enum argc = 2;
-	asm {
+	asm
+	{
 		naked;
 		push EBP;
 		mov EBP, ESP;
@@ -82,7 +86,8 @@ void hijackFunction(T: F*, F)(void* originAddress, string originCode, T func) if
 /*if(is(F == function) && is(ParameterTypeTuple!F Args) &&
 is(ReturnType!(Args[0]) == ReturnType!F) && is(ParameterTypeTuple!(Args[0]) == Args[1 .. $]))*/
 in { assert(originCode.length >= 5); }
-body {
+body
+{
 	//naked2();
 	alias ParameterTypeTuple!F HijackedArgs;
 	alias HijackedArgs[1 .. $] Args;
@@ -113,9 +118,11 @@ body {
 	writeAsms(mptr, x"5D C2", cast(ushort) (4 * Args.length)); // pop ebp; ret imm16;
 }
 
-version(unittest) {
+version(unittest)
+{
 	int originalTestCalled = 0;
-	extern(Windows) int originalTest(int a, int b) {
+	extern(Windows) int originalTest(int a, int b)
+	{
 		asm { nop; nop; }
 		assert(a == 0x11);
 		assert(b == 0x22);
@@ -123,14 +130,16 @@ version(unittest) {
 		return 0x33;
 	}
 
-	extern(Windows) int myTest(typeof(&originalTest) origin, int a, int b) {
+	extern(Windows) int myTest(typeof(&originalTest) origin, int a, int b)
+	{
 		assert(a == 0x44);
 		assert(b == 0x55);
 		return origin(b / 5, a / 2) * 2;
 	}
 }
 
-unittest {
+unittest
+{
 	assert(originalTest(0x11, 0x22) == 0x33 && originalTestCalled == 1);
 	hijackFunction(cast(void*) &originalTest,
 		x"55 8BEC 90 90" /*push ebp; mov ebp, esp; nop; nop;*/, // FIXME write originalTest is asm?
@@ -142,7 +151,8 @@ private:
 
 void insertJump(ubyte* ptr, size_t n, const(void)* target)
 in { assert(n >= 5); }
-body {
+body
+{
 	auto memory = ProcessMemory.current;
 	DWORD oldProtect = memory.changeProtection(cast(size_t) ptr, n, PAGE_EXECUTE_READWRITE);
 	*ptr = 0xE9; // JMP rel32
@@ -153,18 +163,21 @@ body {
 	enforce(FlushInstructionCache(memory.processHandle, ptr, n));
 }
 
-void writeAsm(T)(ref ubyte* ptr, in T[] tarr...) {
+void writeAsm(T)(ref ubyte* ptr, in T[] tarr...)
+{
 	auto barr = cast(const(ubyte)[]) tarr;
 	ptr[0 .. barr.length] = barr;
 	ptr += barr.length;
 }
 
-void writeAsms(A...)(ref ubyte* ptr, A args) {
+void writeAsms(A...)(ref ubyte* ptr, A args)
+{
 	foreach(arg; args)
 		writeAsm(ptr, arg);
 }
 
-void writeRel32(ref ubyte* ptr, ubyte op, void* target) {
+void writeRel32(ref ubyte* ptr, ubyte op, void* target)
+{
 	*ptr = op;
 	*cast(const(void)**) (ptr+1) = target - (cast(size_t) ptr + 5);
 	ptr += 5;
