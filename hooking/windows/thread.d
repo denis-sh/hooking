@@ -159,10 +159,7 @@ struct Thread
 		for(size_t i = 0; ;++i)
 		{
 			Sleep(20);
-			CONTEXT context;
-			context.ContextFlags = CONTEXT_CONTROL;
-			enforce(GetThreadContext(_handle, &context));
-			if(context.Eip == address)
+			if(getContext(CONTEXT_CONTROL).Eip == address)
 				break;
 			enforce(i < 50);
 		}
