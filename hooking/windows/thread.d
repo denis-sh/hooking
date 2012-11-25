@@ -9,9 +9,10 @@ Authors: Denis Shelomovskij
 module hooking.windows.thread;
 
 import hooking.windows.c.winternl;
+import hooking.windows.process: currentWOW64;
 import core.sys.windows.windows;
 import std.exception;
-
+import std.string;
 
 /** This struct encapsulates thread manipulation functionality.
 */
@@ -22,6 +23,15 @@ struct Thread
 		HANDLE _handle;
 		DWORD _handleAccess;
 		DWORD _threadId;
+	}
+
+
+	private void checkAccess(DWORD requiredAccess, string func)
+	{
+		if(cast(ubyte) GetVersion() < 6 && (requiredAccess & THREAD_QUERY_LIMITED_INFORMATION))
+			requiredAccess = requiredAccess & ~THREAD_QUERY_LIMITED_INFORMATION | THREAD_QUERY_INFORMATION;
+		enforce((_handleAccess & requiredAccess) == requiredAccess,
+			xformat("Insufficient thread handle access to call '%s'", func));
 	}
 
 
@@ -36,6 +46,9 @@ struct Thread
 	Otherwise if $(D desiredAccess) is non-zero then a thread handle
 	will be opened with requested access.
 	Otherwise no handle is opened.
+	In the latter case for each member function with "Required handle access"
+	paragraph in documentation call a temporary handle with required access is
+	opened.
 	*/
 	this(DWORD threadId, DWORD desiredAccess, bool tryUsePseudoHandle)
 	out { assert(associated); }
@@ -90,6 +103,14 @@ struct Thread
 		}
 	}
 
+	unittest
+	{
+		auto t = Thread(GetCurrentThreadId(), 0, false);
+		assert(!t.handle && !t.handleAccess);
+		import hooking.windows.process;
+		assert(t.ownerProcessId == Process.currentLocal().processId);
+	}
+
 
 	~this()
 	{
@@ -135,10 +156,18 @@ struct Thread
 	body { return _threadId; }
 
 
-	/// Gets the process identifier of the owner process.
+	/** Gets the process identifier of the owner process.
+
+	Required handle access:
+	$(D THREAD_QUERY_LIMITED_INFORMATION)
+	*/
 	@property DWORD ownerProcessId()
 	in { assert(associated); }
-	body { return enforce(getThreadOrProcessIdOfThread(_handle, true)); }
+	body
+	{
+		mixin(requireAccess(q{THREAD_QUERY_LIMITED_INFORMATION}, q{ownerProcessId}));
+		return enforce(getThreadOrProcessIdOfThread(_handle, true));
+	}
 
 
 	/** Suspends thread.
@@ -146,10 +175,17 @@ struct Thread
 	Calls
 	$(HTTP msdn.microsoft.com/en-us/library/windows/desktop/ms686345(v=vs.85).aspx,
 	SuspendThread).
+
+	Required handle access:
+	$(D THREAD_SUSPEND_RESUME)
 	*/
 	void suspend()
 	in { assert(associated); }
-	body { enforce(SuspendThread(_handle) != -1); }
+	body
+	{
+		mixin(requireAccess(q{THREAD_SUSPEND_RESUME}, q{suspend()}));
+		enforce(SuspendThread(_handle) != -1);
+	}
 
 
 	/** Resumes thread.
@@ -157,20 +193,31 @@ struct Thread
 	Calls
 	$(HTTP msdn.microsoft.com/en-us/library/windows/desktop/ms685086(v=vs.85).aspx,
 	ResumeThread).
+
+	Required handle access:
+	$(D THREAD_SUSPEND_RESUME)
 	*/
 	void resume()
 	in { assert(associated); }
-	body { enforce(ResumeThread(_handle) != -1); }
+	body 
+	{
+		mixin(requireAccess(q{THREAD_SUSPEND_RESUME}, q{resume()}));
+		enforce(ResumeThread(_handle) != -1);
+	}
 
 
 	/** Waits for thread's EIP to be fixed on $(D address) (e.g. because of a `JMP $-2;` loop).
 
 	It will resume the thread if it is suspended and then increase suspended count with the same value.
+
+	Required handle access:
+	$(D THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT), on WOW64 $(D THREAD_QUERY_INFORMATION) is also required.
 	*/
 	void executeUntil(size_t address)
 	in { assert(associated); }
 	body
 	{
+		mixin(requireAccess(q{THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | (currentWOW64 ? THREAD_QUERY_INFORMATION : 0)}, q{executeUntil(address)}));
 		DWORD suspendCount = ResumeThread(_handle);
 		enforce(suspendCount != -1);
 		foreach(i; 1 .. suspendCount)
@@ -193,11 +240,15 @@ struct Thread
 	Calls
 	$(HTTP msdn.microsoft.com/en-us/library/windows/desktop/ms679362(v=vs.85).aspx,
 	GetThreadContext).
+
+	Required handle access:
+	$(D THREAD_GET_CONTEXT), on WOW64 $(D THREAD_QUERY_INFORMATION) is also required.
 	*/
 	CONTEXT getContext(DWORD flags)
 	in { assert(associated); }
 	body
 	{
+		mixin(requireAccess(q{THREAD_GET_CONTEXT | (currentWOW64 ? THREAD_QUERY_INFORMATION : 0)}, q{getContext(flags)}));
 		CONTEXT context;
 		context.ContextFlags = flags;
 		enforce(GetThreadContext(_handle, &context));
@@ -210,20 +261,29 @@ struct Thread
 	Calls
 	$(HTTP msdn.microsoft.com/en-us/library/windows/desktop/ms680632(v=vs.85).aspx,
 	SetThreadContext).
+
+	Required handle access:
+	$(D THREAD_SET_CONTEXT)
 	*/
 	void setContext(CONTEXT context)
 	in { assert(associated); }
 	body
 	{
+		mixin(requireAccess(q{THREAD_SET_CONTEXT}, "setContext(context)"));
 		enforce(SetThreadContext(_handle, &context));
 	}
 
 	
-	/// Convenient function for changing thread context.
+	/** Convenient function for changing thread context.
+
+	Required handle access:
+	$(D THREAD_GET_CONTEXT | THREAD_SET_CONTEXT), on WOW64 $(D THREAD_QUERY_INFORMATION) is also required.
+	*/
 	void changeContext(DWORD getFlags, scope void delegate(ref CONTEXT) del)
 	in { assert(associated); }
 	body
 	{
+		mixin(requireAccess(q{THREAD_GET_CONTEXT | THREAD_SET_CONTEXT | (currentWOW64 ? THREAD_QUERY_INFORMATION : 0)}, "changeContext(getFlags, del)"));
 		CONTEXT context = getContext(getFlags);
 		del(context);
 		setContext(context);
@@ -261,6 +321,15 @@ enum : DWORD
 	THREAD_QUERY_LIMITED_INFORMATION = 0x0800,
 
 	THREAD_ALL_ACCESS        = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x3FF
+}
+
+
+private string requireAccess(string requiredAccess, string func)
+{
+	return xformat(q{
+		if(_handle) checkAccess(%s, q{%s});
+		else return Thread(_threadId, %1$s, true).%2$s;
+	}, requiredAccess, func);
 }
 
 

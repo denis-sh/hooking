@@ -370,7 +370,7 @@ struct Process
 	{
 		auto threadIds = getThreadIds();
 		assert(threadIds.length == 1);
-		initializeWindowsStuff(Thread(threadIds[0], THREAD_ALL_ACCESS, false));
+		initializeWindowsStuff(Thread(threadIds[0], 0, false));
 	}
 
 	unittest
