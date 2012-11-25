@@ -61,13 +61,33 @@ struct Thread
 	}
 
 
-	/// Construct a $(D Thread) from a $(D threadHandle).
-	this(HANDLE threadHandle)
+	/** Construct a $(D Thread) from a $(D threadHandle).
+	$(D threadHandle) access obtained when it was opened
+	should be passed as $(D handleAccess) parameter.
+	If $(D remainPseudoHandle) is $(D false) and $(D threadHandle)
+	is pseudo handle of current thread then "real" handle with
+	access from $(D handleAccess) will be opened instead.
+	If $(D remainPseudoHandle) is $(D true) and $(D threadHandle)
+	is pseudo handle then $(D handleAccess) will be set to $(D THREAD_ALL_ACCESS).
+
+	$(D threadId) will not be set iff resulting $(D handleAccess)
+	doesn't include $(D THREAD_QUERY_INFORMATION) or $(D THREAD_QUERY_LIMITED_INFORMATION).
+	In this case calling $(D closeHandle) will result in unassociation of this struct.
+	*/
+	this(HANDLE threadHandle, DWORD handleAccess, bool remainPseudoHandle)
 	out { assert(associated); }
 	body
 	{
-		_handle = threadHandle;
-		_threadId = getThreadOrProcessIdOfThread(_handle, false);
+		immutable bool isPseudoHandle = threadHandle == GetCurrentThread();
+		if(!remainPseudoHandle && isPseudoHandle)
+			this = Thread(GetCurrentThreadId(), handleAccess, false);
+		else
+		{
+			_handle = threadHandle;
+			_handleAccess = isPseudoHandle ? THREAD_ALL_ACCESS : handleAccess;
+			if(_handleAccess & (THREAD_QUERY_INFORMATION  | THREAD_QUERY_LIMITED_INFORMATION))
+				_threadId = enforce(getThreadOrProcessIdOfThread(threadHandle, false));
+		}
 	}
 
 
