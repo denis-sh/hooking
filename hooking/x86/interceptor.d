@@ -118,11 +118,11 @@ body
 	writeAsms(mptr, x"5D C2", cast(ushort) (4 * Args.length)); // pop ebp; ret imm16;
 }
 
-version(unittest)
+unittest
 {
-	int originalTestCalled = 0;
+	static int originalTestCalled = 0;
 
-	int originalTestImpl(int a, int b)
+	static int originalTestImpl(int a, int b)
 	{
 		assert(a == 0x11);
 		assert(b == 0x22);
@@ -130,7 +130,7 @@ version(unittest)
 		return 0x33;
 	}
 
-	extern(Windows) int originalTest(int a, int b)
+	extern(Windows) static int originalTest(int a, int b)
 	{
 		asm
 		{
@@ -147,16 +147,14 @@ version(unittest)
 		}
 	}
 
-	extern(Windows) int myTest(typeof(&originalTest) origin, int a, int b)
+	extern(Windows) static int myTest(typeof(&originalTest) origin, int a, int b)
 	{
 		assert(a == 0x44);
 		assert(b == 0x55);
 		return origin(b / 5, a / 2) * 2;
 	}
-}
 
-unittest
-{
+
 	assert(originalTest(0x11, 0x22) == 0x33 && originalTestCalled == 1);
 	hijackFunction(cast(void*) &originalTest,
 		x"55 8BEC 90 90" /*push ebp; mov ebp, esp; nop; nop;*/,
