@@ -182,7 +182,10 @@
 	access will be used.
 	Otherwise if <span class="inlinecode"><i>desiredAccess</i></span> is non-zero then a process handle
 	will be opened with requested access.
-	Otherwise no handle is opened.</p>
+	Otherwise no handle is opened.
+	In the latter case for each member function with "Required handle access"
+	paragraph in documentation call a temporary handle with required access is
+	opened.</p>
 </dl>
 </div>
 <hr><div class="row-fluid declaration"><h3><a name="Process.this"></a> this(HANDLE <i>processHandle</i>, DWORD <i>handleAccess</i>, bool <i>remainPseudoHandle</i>);
@@ -261,6 +264,14 @@
 <div class="declaration-content"><dl><p>Gets associated <span class="inlinecode">ProcessMemory</span> instance.</p>
 </dl>
 </div>
+<hr><div class="row-fluid declaration"><h3><a name="Process.isWOW64"></a>@property bool <span class="symbol-target" id="isWOW64">&nbsp;</span><a class="symbol-link" href="#isWOW64">isWOW64</a>();
+</h3></div>
+<div class="declaration-content"><dl><p>Determines whether this process is running under <a href="http://msdn.microsoft.com/en-us/library/windows/desktop/aa384249(v=vs.85).aspx">WOW64</a>.
+</p>
+<p>Required handle access:
+	<span class="inlinecode">PROCESS_QUERY_INFORMATION</span></p>
+</dl>
+</div>
 <hr><div class="row-fluid declaration"><h3><a name="Process.initializeWindowsStuff"></a>void <span class="symbol-target" id="initializeWindowsStuff">&nbsp;</span><a class="symbol-link" href="#initializeWindowsStuff">initializeWindowsStuff</a>(ref Thread <i>primaryThread</i>);
 <br><a name="Process.initializeWindowsStuff"></a>void <span class="symbol-target" id="initializeWindowsStuff">&nbsp;</span><a class="symbol-link" href="#initializeWindowsStuff">initializeWindowsStuff</a>();
 </h3></div>
@@ -276,6 +287,10 @@ The process is created suspended and not started yet or its primary thread is pa
 	before initialization is finished (before module entry point is reached
 	in current implementation).
 	<font color=red>Preconditions violation results in undefined behavior.</font>
+<br><br>
+
+	Required handle access:
+	<span class="inlinecode">PROCESS_QUERY_INFORMATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION</span>
 
 </dd>
 <dt>Example:</dt><dd>
@@ -304,6 +319,10 @@ The process is created suspended and not started yet or its primary thread is pa
 Initialized internal Windows stuff.
 	No DLL are loaded/unloaded during function call.
 	<font color=red>Preconditions violation results in undefined behavior.</font>
+<br><br>
+
+	Required handle access:
+	<span class="inlinecode">PROCESS_QUERY_INFORMATION | PROCESS_VM_READ</span>
 
 </dd>
 <dt>Example:</dt><dd>
@@ -319,7 +338,10 @@ Initialized internal Windows stuff.
 </div>
 <hr><div class="row-fluid declaration"><h3><a name="Process.getThreadIds"></a>uint[] <span class="symbol-target" id="getThreadIds">&nbsp;</span><a class="symbol-link" href="#getThreadIds">getThreadIds</a>();
 </h3></div>
-<div class="declaration-content"><dl><p>Returns thread identifiers of all running threads in the process.</p>
+<div class="declaration-content"><dl><p>Returns thread identifiers of all running threads in the process.
+</p>
+<p>Required handle access:
+	<span class="inlinecode">PROCESS_QUERY_INFORMATION | PROCESS_VM_READ</span></p>
 </dl>
 </div>
 <hr><div class="row-fluid declaration"><h3><a name="Process.loadDll"></a>void <span class="symbol-target" id="loadDll">&nbsp;</span><a class="symbol-link" href="#loadDll">loadDll</a>(ref Thread <i>thread</i>, string <i>dllName</i>);
@@ -328,7 +350,11 @@ Initialized internal Windows stuff.
 </p>
 <dt>Preconditions:</dt><dd>
 Initialized internal Windows stuff.
-	<font color=red>Preconditions violation results in undefined behavior.</font></dd>
+	<font color=red>Preconditions violation results in undefined behavior.</font>
+<br><br>
+
+	Required handle access:
+	<span class="inlinecode">PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION</span></dd>
 </dl>
 </div>
 <hr><div class="row-fluid declaration"><h3><a name="Process.terminate"></a>void <span class="symbol-target" id="terminate">&nbsp;</span><a class="symbol-link" href="#terminate">terminate</a>(uint <i>exitCode</i> = -1);
@@ -336,12 +362,19 @@ Initialized internal Windows stuff.
 <div class="declaration-content"><dl><p>Terminates the process and set its exit code with <span class="inlinecode"><i>exitCode</i></span>.
 </p>
 <p>Calls
-	<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms686714(v=vs.85).aspx">	TerminateProcess</a>.</p>
+	<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms686714(v=vs.85).aspx">	TerminateProcess</a>.
+<br><br>
+
+	Required handle access:
+	<span class="inlinecode">PROCESS_TERMINATE</span></p>
 </dl>
 </div>
 <hr><div class="row-fluid declaration"><h3><a name="Process.waitForExit"></a>int <span class="symbol-target" id="waitForExit">&nbsp;</span><a class="symbol-link" href="#waitForExit">waitForExit</a>();
 </h3></div>
-<div class="declaration-content"><dl><p>Waits for the process to exit and returns exit code.</p>
+<div class="declaration-content"><dl><p>Waits for the process to exit and returns exit code.
+</p>
+<p>Required handle access:
+	<span class="inlinecode">SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION</span></p>
 </dl>
 </div>
 <hr><div class="row-fluid declaration"><h3><a name="Process.waitForExit"></a>bool <span class="symbol-target" id="waitForExit">&nbsp;</span><a class="symbol-link" href="#waitForExit">waitForExit</a>(Duration <i>duration</i>, out uint <i>exitCode</i>);
@@ -350,6 +383,10 @@ Initialized internal Windows stuff.
 <div class="declaration-content"><dl><p>Waits the specified <span class="inlinecode"><i>duration</i></span> for the process to exit
 	and returns wheter it exited. If it does exited, set <span class="inlinecode"><i>exitCode</i></span>
 	with the process exit code.
+</p>
+<p>Required handle access:
+	<span class="inlinecode">SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION</span>
+
 </p>
 <dt>Known Bugs</dt><dd>If total milliseconds in <i>duration</i> &gt;= <span class="inlinecode">uint.max</span> (more than 49 days)
 	it will wait infinite time (i.e. equals to <span class="inlinecode"><span class="symbol-target" id="waitForExit">&nbsp;</span><a class="symbol-link" href="#waitForExit">waitForExit</a>()</span>).</dd>

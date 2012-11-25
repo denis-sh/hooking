@@ -154,12 +154,26 @@
 	access will be used.
 	Otherwise if <span class="inlinecode"><i>desiredAccess</i></span> is non-zero then a thread handle
 	will be opened with requested access.
-	Otherwise no handle is opened.</p>
+	Otherwise no handle is opened.
+	In the latter case for each member function with "Required handle access"
+	paragraph in documentation call a temporary handle with required access is
+	opened.</p>
 </dl>
 </div>
-<hr><div class="row-fluid declaration"><h3><a name="Thread.this"></a> this(HANDLE <i>threadHandle</i>);
+<hr><div class="row-fluid declaration"><h3><a name="Thread.this"></a> this(HANDLE <i>threadHandle</i>, DWORD <i>handleAccess</i>, bool <i>remainPseudoHandle</i>);
 </h3></div>
-<div class="declaration-content"><dl><p>Construct a <span class="inlinecode">Thread</span> from a <span class="inlinecode"><i>threadHandle</i></span>.</p>
+<div class="declaration-content"><dl><p>Construct a <span class="inlinecode">Thread</span> from a <span class="inlinecode"><i>threadHandle</i></span>.
+	<span class="inlinecode"><i>threadHandle</i></span> access obtained when it was opened
+	should be passed as <span class="inlinecode"><i>handleAccess</i></span> parameter.
+	If <span class="inlinecode"><i>remainPseudoHandle</i></span> is <span class="inlinecode"><span class="d_keyword">false</span></span> and <span class="inlinecode"><i>threadHandle</i></span>
+	is pseudo handle of current thread then "real" handle with
+	access from <span class="inlinecode"><i>handleAccess</i></span> will be opened instead.
+	If <span class="inlinecode"><i>remainPseudoHandle</i></span> is <span class="inlinecode"><span class="d_keyword">true</span></span> and <span class="inlinecode"><i>threadHandle</i></span>
+	is pseudo handle then <span class="inlinecode"><i>handleAccess</i></span> will be set to <span class="inlinecode">THREAD_ALL_ACCESS</span>.
+</p>
+<p><span class="inlinecode">threadId</span> will not be set iff resulting <span class="inlinecode"><i>handleAccess</i></span>
+	doesn't include <span class="inlinecode">THREAD_QUERY_INFORMATION</span> or <span class="inlinecode">THREAD_QUERY_LIMITED_INFORMATION</span>.
+	In this case calling <span class="inlinecode">closeHandle</span> will result in unassociation of this struct.</p>
 </dl>
 </div>
 <hr><div class="row-fluid declaration"><h3><a name="Thread.associated"></a>const pure nothrow @property @safe bool <span class="symbol-target" id="associated">&nbsp;</span><a class="symbol-link" href="#associated">associated</a>();
@@ -192,7 +206,10 @@
 </div>
 <hr><div class="row-fluid declaration"><h3><a name="Thread.ownerProcessId"></a>@property DWORD <span class="symbol-target" id="ownerProcessId">&nbsp;</span><a class="symbol-link" href="#ownerProcessId">ownerProcessId</a>();
 </h3></div>
-<div class="declaration-content"><dl><p>Gets the process identifier of the owner process.</p>
+<div class="declaration-content"><dl><p>Gets the process identifier of the owner process.
+</p>
+<p>Required handle access:
+	<span class="inlinecode">THREAD_QUERY_LIMITED_INFORMATION</span></p>
 </dl>
 </div>
 <hr><div class="row-fluid declaration"><h3><a name="Thread.suspend"></a>void <span class="symbol-target" id="suspend">&nbsp;</span><a class="symbol-link" href="#suspend">suspend</a>();
@@ -200,7 +217,11 @@
 <div class="declaration-content"><dl><p>Suspends thread.
 </p>
 <p>Calls
-	<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms686345(v=vs.85).aspx">	SuspendThread</a>.</p>
+	<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms686345(v=vs.85).aspx">	SuspendThread</a>.
+<br><br>
+
+	Required handle access:
+	<span class="inlinecode">THREAD_SUSPEND_RESUME</span></p>
 </dl>
 </div>
 <hr><div class="row-fluid declaration"><h3><a name="Thread.resume"></a>void <span class="symbol-target" id="resume">&nbsp;</span><a class="symbol-link" href="#resume">resume</a>();
@@ -208,14 +229,22 @@
 <div class="declaration-content"><dl><p>Resumes thread.
 </p>
 <p>Calls
-	<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms685086(v=vs.85).aspx">	ResumeThread</a>.</p>
+	<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms685086(v=vs.85).aspx">	ResumeThread</a>.
+<br><br>
+
+	Required handle access:
+	<span class="inlinecode">THREAD_SUSPEND_RESUME</span></p>
 </dl>
 </div>
 <hr><div class="row-fluid declaration"><h3><a name="Thread.executeUntil"></a>void <span class="symbol-target" id="executeUntil">&nbsp;</span><a class="symbol-link" href="#executeUntil">executeUntil</a>(size_t <i>address</i>);
 </h3></div>
 <div class="declaration-content"><dl><p>Waits for thread's EIP to be fixed on <span class="inlinecode"><i>address</i></span> (e.g. because of a `JMP $-2;` loop).
 </p>
-<p>It will resume the thread if it is suspended and then increase suspended count with the same value.</p>
+<p>It will resume the thread if it is suspended and then increase suspended count with the same value.
+<br><br>
+
+	Required handle access:
+	<span class="inlinecode">THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT</span>, on WOW64 <span class="inlinecode">THREAD_QUERY_INFORMATION</span> is also required.</p>
 </dl>
 </div>
 <hr><div class="row-fluid declaration"><h3><a name="Thread.getContext"></a>CONTEXT <span class="symbol-target" id="getContext">&nbsp;</span><a class="symbol-link" href="#getContext">getContext</a>(DWORD <i>flags</i>);
@@ -223,7 +252,11 @@
 <div class="declaration-content"><dl><p>Gets thread context.
 </p>
 <p>Calls
-	<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms679362(v=vs.85).aspx">	GetThreadContext</a>.</p>
+	<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms679362(v=vs.85).aspx">	GetThreadContext</a>.
+<br><br>
+
+	Required handle access:
+	<span class="inlinecode">THREAD_GET_CONTEXT</span>, on WOW64 <span class="inlinecode">THREAD_QUERY_INFORMATION</span> is also required.</p>
 </dl>
 </div>
 <hr><div class="row-fluid declaration"><h3><a name="Thread.setContext"></a>void <span class="symbol-target" id="setContext">&nbsp;</span><a class="symbol-link" href="#setContext">setContext</a>(CONTEXT <i>context</i>);
@@ -231,12 +264,19 @@
 <div class="declaration-content"><dl><p>Sets thread <i>context</i>.
 </p>
 <p>Calls
-	<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms680632(v=vs.85).aspx">	SetThreadContext</a>.</p>
+	<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms680632(v=vs.85).aspx">	SetThreadContext</a>.
+<br><br>
+
+	Required handle access:
+	<span class="inlinecode">THREAD_SET_CONTEXT</span></p>
 </dl>
 </div>
 <hr><div class="row-fluid declaration"><h3><a name="Thread.changeContext"></a>void <span class="symbol-target" id="changeContext">&nbsp;</span><a class="symbol-link" href="#changeContext">changeContext</a>(DWORD <i>getFlags</i>, scope void delegate(ref CONTEXT) <i>del</i>);
 </h3></div>
-<div class="declaration-content"><dl><p>Convenient function for changing thread context.</p>
+<div class="declaration-content"><dl><p>Convenient function for changing thread context.
+</p>
+<p>Required handle access:
+	<span class="inlinecode">THREAD_GET_CONTEXT | THREAD_SET_CONTEXT</span>, on WOW64 <span class="inlinecode">THREAD_QUERY_INFORMATION</span> is also required.</p>
 </dl>
 </div>
 <hr><div class="row-fluid declaration"><h3><a name="Thread.closeHandle"></a>void <span class="symbol-target" id="closeHandle">&nbsp;</span><a class="symbol-link" href="#closeHandle">closeHandle</a>();
