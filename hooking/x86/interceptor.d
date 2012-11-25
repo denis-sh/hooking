@@ -121,13 +121,30 @@ body
 version(unittest)
 {
 	int originalTestCalled = 0;
-	extern(Windows) int originalTest(int a, int b)
+
+	int originalTestImpl(int a, int b)
 	{
-		asm { nop; nop; }
 		assert(a == 0x11);
 		assert(b == 0x22);
 		++originalTestCalled;
 		return 0x33;
+	}
+
+	extern(Windows) int originalTest(int a, int b)
+	{
+		asm
+		{
+			naked;
+			push EBP;
+			// Use "mov r32,r/m32", not "mov r/m32,r32"
+			db 0x8B, 0xEC; // mov EBP, ESP; 
+			nop; nop;
+			push dword ptr [EBP+8];
+			mov EAX, [EBP+0xc];
+			call originalTestImpl;
+			pop EBP;
+			ret 8;
+		}
 	}
 
 	extern(Windows) int myTest(typeof(&originalTest) origin, int a, int b)
@@ -142,7 +159,7 @@ unittest
 {
 	assert(originalTest(0x11, 0x22) == 0x33 && originalTestCalled == 1);
 	hijackFunction(cast(void*) &originalTest,
-		x"55 8BEC 90 90" /*push ebp; mov ebp, esp; nop; nop;*/, // FIXME write originalTest is asm?
+		x"55 8BEC 90 90" /*push ebp; mov ebp, esp; nop; nop;*/,
 		&myTest);
 	assert(originalTest(0x44, 0x55) == 0x66 && originalTestCalled == 2);
 }
