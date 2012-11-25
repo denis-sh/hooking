@@ -297,6 +297,21 @@ struct Process
 	body { return ProcessMemory(handle); }
 
 
+	/** Determines whether this process is running under $(HTTP
+	msdn.microsoft.com/en-us/library/windows/desktop/aa384249(v=vs.85).aspx, WOW64).
+	*/
+	@property bool isWOW64()
+	in { assert(associated); }
+	body
+	{
+		if(!hasWOW64)
+			return false;
+		BOOL res;
+		enforce(IsWow64Process(_handle, &res));
+		return !!res;
+	}
+
+
 	/** Initializes internal Windows stuff required for WinAPI
 	functions like $(D EnumProcessModules).
 
@@ -771,6 +786,24 @@ void[] helperNtQuerySystemInformation(SYSTEM_INFORMATION_CLASS SystemInformation
 	}
 }
 
+package immutable bool hasWOW64, currentWOW64;
+
+shared static this()
+{
+	IsWow64Process = cast(IsWow64ProcessType)
+		GetProcAddress(enforce(GetModuleHandleA("Kernel32")), "IsWow64Process");
+
+	hasWOW64 = !!IsWow64Process;
+	if(hasWOW64)
+	{
+		BOOL res;
+		enforce(IsWow64Process(GetCurrentProcess(), &res));
+		currentWOW64 = !!res;
+	}
+	else
+		currentWOW64 = false;
+}
+
 
 // WinAPI
 // --------------------------------------------------
@@ -851,4 +884,7 @@ extern(Windows) nothrow
 		HANDLE hProcess,
 		UINT uExitCode
 	);
+
+	alias BOOL function(HANDLE hProcess, PBOOL Wow64Process) IsWow64ProcessType;
+	immutable IsWow64ProcessType IsWow64Process;
 }
