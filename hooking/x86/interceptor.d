@@ -61,26 +61,6 @@ void insertCall(alias f, size_t address, string originCode)()
 
 import std.traits;
 
-void naked2() nothrow
-{
-	enum argc = 2;
-	asm
-	{
-		naked;
-		push EBP;
-		mov EBP, ESP;
-		push dword ptr [EBP+4+4*2];
-		push dword ptr [EBP+4+4*1];
-		push dword ptr 0x0040997B;
-		//call myTest;
-		pop EBP;
-		ret 4 * argc;
-		db 0x55,0x8B,0xEC,0x90,0x90;
-		mov EDX, 0x0040998D;
-		jmp EDX;
-	}
-}
-
 // FIXME: hijacked function can jump to its start so we need to unhijack it first.
 void hijackFunction(T: F*, F)(void* originAddress, string originCode, T func) if(is(F == function))
 /*if(is(F == function) && is(ParameterTypeTuple!F Args) &&
@@ -88,7 +68,6 @@ is(ReturnType!(Args[0]) == ReturnType!F) && is(ParameterTypeTuple!(Args[0]) == A
 in { assert(originCode.length >= 5); }
 body
 {
-	//naked2();
 	alias ParameterTypeTuple!F HijackedArgs;
 	alias HijackedArgs[1 .. $] Args;
 	static assert(HijackedArgs.length >= 1);
