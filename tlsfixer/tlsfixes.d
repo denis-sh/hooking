@@ -62,18 +62,30 @@ void fixLibraryLoading() {
 	);
 
 	insertJump(
-		cast(void*) 0x7C901187,
+		dllMainCallAddress,
 		x"FF55 08  8BE6", // call [EBP+8]; mov ESP, ESI;
-		cast(const void*) &nakedDllMainCaller
+		&nakedDllMainCaller
 	);
+
 
 	// Insert our hook in the memory freeing function (something like LdrpFreeTls in ReactOS)
 	// called by LdrShutdownThread just before function that calls RtlLeaveCriticalSection
-	insertCall!(nakedOnLdrShutdownThread,
-		0x7C91A7D8,      // The target of first from the last three calls in LdrShutdownThread before return
-		// On older ntdll.dll: 0x7C9139A8
-		x"8B70 2C  85F6" // mov ESI, dword ptr DS:[EAX + 0x2C]; test ESI, ESI;
-	)();
+
+	// The target of first from the last three calls in LdrShutdownThread before return
+	void* inLdrpFreeTls = cast(void*) 0x7C91A7D8;
+	// On older ntdll.dll: 0x7C9139A8
+
+	insertJump(
+		cast(void*) &nakedOnLdrShutdownThread + (/*push EAX*/ 1 + /*call*/ 5 + /*pop EAX*/ 1 + /*origin code*/ 5),
+		x"CC CC CC CC CC",
+		inLdrpFreeTls + 5
+	);
+
+	insertJump(
+		inLdrpFreeTls,
+		x"8B70 2C  85F6", // mov ESI, dword ptr DS:[EAX + 0x2C]; test ESI, ESI;
+		&nakedOnLdrShutdownThread
+	);
 
 
 	libraryLoadingFixed = true;
@@ -97,6 +109,19 @@ void nakedDllMainCaller() nothrow {
 	}
 }
 
+void nakedOnLdrShutdownThread() nothrow
+{
+	asm {
+		naked;
+		push EAX;
+		call windowsOnLdrShutdownThread;
+		pop EAX;
+		mov ESI, dword ptr DS:[EAX + 0x2C];
+		test ESI, ESI;
+		db 0xCC, 0xCC, 0xCC, 0xCC, 0xCC; // will be replced with JMP back
+	}
+}
+
 extern (Windows) {
 	alias BOOL function(HINSTANCE hInstance, ULONG ulReason, LPVOID pvReserved) DllMainType;
 
@@ -107,13 +132,10 @@ extern (Windows) {
 		afterDllMainCalled(hInstance, ulReason, pvReserved);
 		return res;
 	}
-}
 
-void nakedOnLdrShutdownThread() nothrow {
-	asm {
-		naked;
-		call onLdrShutdownThread;
-		ret;
+	void windowsOnLdrShutdownThread() nothrow
+	{
+		onLdrShutdownThread();
 	}
 }
 
