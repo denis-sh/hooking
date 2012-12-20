@@ -52,16 +52,20 @@ void fixLibraryLoading() {
 
 	// FIXME: get addresses dynamically for current ntdll.dll
 	// using `RtlFreeHeap` and `LdrShutdownThread` exported functions
-	
-	insertCall!(nakedTlsFixer!beforeDllMainCalled,
-		0x7C901179,
-		x"56  57  53  8BF4" // push ESI; push EDI; push EBX; mov ESI, ESP;
-	)();
 
-	insertCall!(nakedTlsFixer!afterDllMainCalled,
-		0x7C90118F,
-		x"5D  C2 1000  90" // pop EBP; retn 10; nop;
-	)();
+	void* dllMainCallAddress = cast(void*) 0x7C901187;
+
+	insertJump(
+		cast(void*) &nakedDllMainCaller + (/*push*/ 3 + /*call*/ 5 + /*mov*/ 2),
+		x"CC CC CC CC CC",
+		dllMainCallAddress + 5
+	);
+
+	insertJump(
+		cast(void*) 0x7C901187,
+		x"FF55 08  8BE6", // call [EBP+8]; mov ESP, ESI;
+		cast(const void*) &nakedDllMainCaller
+	);
 
 
 	insertCall!(nakedOnRtlFreeHeapCalled,
@@ -93,15 +97,25 @@ private:
 
 shared bool libraryLoadingFixed = false;
 
-void nakedTlsFixer(alias f)() nothrow {
+void nakedDllMainCaller() nothrow {
 	asm {
 		naked;
-		// beforeDllMainCalled(hinstDLL, reason);
-		push dword ptr [EBP+0xC];
-		push dword ptr [EBP+0x10];
-		mov EAX, [EBP+0x14];
-		call f;
-		ret;
+		push dword ptr [EBP+8];
+		call dllMainCaller;
+		mov ESP, ESI;
+		db 0xCC, 0xCC, 0xCC, 0xCC, 0xCC; // will be replced with JMP back
+	}
+}
+
+extern (Windows) {
+	alias BOOL function(HINSTANCE hInstance, ULONG ulReason, LPVOID pvReserved) DllMainType;
+
+	BOOL dllMainCaller(DllMainType dllMain, HINSTANCE hInstance, ULONG ulReason, LPVOID pvReserved)
+	{
+		beforeDllMainCalled(hInstance, ulReason, pvReserved);
+		immutable BOOL res = dllMain(hInstance, ulReason, pvReserved);
+		afterDllMainCalled(hInstance, ulReason, pvReserved);
+		return res;
 	}
 }
 
