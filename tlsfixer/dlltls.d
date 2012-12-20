@@ -168,28 +168,6 @@ void onLdrShutdownThread() nothrow {
 	leakedTlsArraysCount = 0;
 }
 
-void onRtlFreeHeapCalled(PVOID HeapHandle, ULONG Flags, PVOID HeapBase) /*nothrow*/ {
-	if(HeapHandle != GetProcessHeap() || Flags != 0)
-		return;
-	auto tlsArray = cast(void**) getTEB()[11];
-	if(!tlsArray)
-		return;
-	if(HeapBase == tlsArray)
-	{
-		//asm { int 3; }
-		bool b1 = HeapHandle == GetProcessHeap();
-		int t = 0;
-	}
-	if(HeapBase == tlsArray[0])
-	{
-		int t = 0;
-	}
-	if(HeapBase == tlsArray[1])
-	{
-		int t = 0;
-	}
-}
-
 private:
 
 // Like `core.sys.windows.threadaux.enumProcessThreadsNothrow` but `nothrow` and with `in void* context`

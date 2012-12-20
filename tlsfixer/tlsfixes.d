@@ -67,16 +67,6 @@ void fixLibraryLoading() {
 		cast(const void*) &nakedDllMainCaller
 	);
 
-
-	insertCall!(nakedOnRtlFreeHeapCalled,
-		0x7C90FF2D,    // RtlFreeHeap function
-		x"68 A0000000" // push 0xA0;
-		/+ or:
-		0x7C90FF3C,          // in RtlFreeHeap function
-		x"8B7D 08   897D C8" // mov EDI, [EBP+0x8]; mov [EBP-0x38], EDI;
-		+/
-	)();
-
 	// Insert our hook in the memory freeing function (something like LdrpFreeTls in ReactOS)
 	// called by LdrShutdownThread just before function that calls RtlLeaveCriticalSection
 	insertCall!(nakedOnLdrShutdownThread,
@@ -116,20 +106,6 @@ extern (Windows) {
 		immutable BOOL res = dllMain(hInstance, ulReason, pvReserved);
 		afterDllMainCalled(hInstance, ulReason, pvReserved);
 		return res;
-	}
-}
-
-void nakedOnRtlFreeHeapCalled() nothrow {
-	asm {
-		naked;
-		push EBP;
-		mov EBP, ESP;
-		push dword ptr [EBP+pushedBytes+8+4];
-		push dword ptr [EBP+pushedBytes+8+4+4];
-		mov EAX, [EBP+pushedBytes+8+4+8];
-		call onRtlFreeHeapCalled;
-		pop EBP;
-		ret;
 	}
 }
 
