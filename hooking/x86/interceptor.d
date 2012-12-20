@@ -141,6 +141,17 @@ unittest
 	assert(originalTest(0x44, 0x55) == 0x66 && originalTestCalled == 2);
 }
 
+void insertJump(void* originAddress, in char[] originCode, const(void)* target)
+in { assert(originCode.length >= 5); }
+body
+{
+	ubyte* optr = cast(ubyte*) originAddress;
+	immutable n = originCode.length;
+	enforce(optr[0 .. n] == originCode,
+		xformat("%(%X %) instead of %(%X %)", optr[0 .. n], cast(const ubyte[]) originCode));
+	insertJump(optr, n, target);
+}
+
 private:
 
 void insertJump(ubyte* ptr, size_t n, const(void)* target)
