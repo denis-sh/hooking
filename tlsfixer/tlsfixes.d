@@ -13,6 +13,7 @@ import std.c.windows.windows;
 import tlsfixer.dlltls;
 import hooking.windows.c.winternl: NTSTATUS;
 import hooking.windows.pe;
+import hooking.x86.utils;
 import hooking.x86.interceptor;
 import std.exception;
 
@@ -50,8 +51,7 @@ void fixLibraryLoading() {
 	// so LdrUnlockLoaderLock may not be called.
 	validateLoadedModules();
 
-	// FIXME: get addresses dynamically for current ntdll.dll
-	// using `RtlFreeHeap` and `LdrShutdownThread` exported functions
+	// FIXME: get DllMain caller addresses dynamically for current ntdll.dll
 
 	void* dllMainCallAddress = cast(void*) 0x7C901187;
 
@@ -71,9 +71,19 @@ void fixLibraryLoading() {
 	// Insert our hook in the memory freeing function (something like LdrpFreeTls in ReactOS)
 	// called by LdrShutdownThread just before function that calls RtlLeaveCriticalSection
 
-	// The target of first from the last three calls in LdrShutdownThread before return
-	void* inLdrpFreeTls = cast(void*) 0x7C91A7D8;
-	// On older ntdll.dll: 0x7C9139A8
+	void* pLdrShutdownThread = enforce(GetProcAddress(ntdll, "LdrShutdownThread"));
+
+	void* pLabel1 = enforce(findCodeReference(pLdrShutdownThread,
+		0x40, x"8B58 20  895D E4  EB ",  // ... jmp short __Label1;
+		true, 1));
+
+	void* pLabel2 = enforce(findCodeReference(pLabel1,
+		0x40, x"3BD8  0F84 ",  // ... je __Label2;
+		true));
+
+	void* pLabel3 = getRelativeTarget(pLabel2 + 0xE);
+
+	void* inLdrpFreeTls = pLabel3 + 9;
 
 	insertJump(
 		cast(void*) &nakedOnLdrShutdownThread + (/*push EAX*/ 1 + /*call*/ 5 + /*pop EAX*/ 1 + /*origin code*/ 5),

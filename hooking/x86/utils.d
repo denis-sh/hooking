@@ -15,9 +15,13 @@ inout(void)* getAbsoluteTarget(inout(void)* address) nothrow
 	return *cast(inout(void)**) address;
 }
 
-inout(void)* getRelativeTarget(inout(void)* address) nothrow
+inout(void)* getRelativeTarget(inout(void)* address, ubyte addressSize = 4) nothrow
+in { assert(addressSize == 1 || addressSize == 4); }
+body
 {
-	return address + (void*).sizeof + *cast(Signed!size_t*) address;
+	return address + addressSize + 
+		(addressSize == 1 ? *cast(byte*) address :
+		*cast(int*) address);
 }
 
 /// Find a code sequence and return the address after the sequence
@@ -31,9 +35,11 @@ inout(void)* findCodeSequence(inout(void)* startAddress, size_t len, string patt
 }
 
 /// Find a code sequence and return the (relative) address that follows
-inout(void)* findCodeReference(inout(void)* startAddress, size_t len, string pattern, bool relative) nothrow
+inout(void)* findCodeReference(inout(void)* startAddress, size_t len, string pattern, bool relative, ubyte addressSize = 4) nothrow
+in { assert(relative || addressSize == 4); }
+body
 {
 	if(auto p = findCodeSequence(startAddress, len, pattern))
-		return relative ? getRelativeTarget(p) : getAbsoluteTarget(p);
+		return relative ? getRelativeTarget(p, addressSize) : getAbsoluteTarget(p);
 	return null;
 }
