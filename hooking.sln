@@ -13,15 +13,12 @@ Project("{002A2DE9-8BB6-484D-9802-7E4AD4084715}") = "RegistryRedirectorDLL", "Re
 		{F263E089-800D-4C8C-9728-73914F6486B5} = {F263E089-800D-4C8C-9728-73914F6486B5}
 	EndProjectSection
 EndProject
-Project("{002A2DE9-8BB6-484D-9802-7E4AD4084715}") = "TLSFixerLib", "TLSFixerLib.visualdproj", "{D5E98716-B571-4FD6-A5B0-8CB397C26FB8}"
+Project("{002A2DE9-8BB6-484D-9802-7E4AD4084715}") = "TLSFixerDLL", "TLSFixerDLL.visualdproj", "{D5E98716-B571-4FD6-A5B0-8CB397C26FB8}"
 	ProjectSection(ProjectDependencies) = postProject
 		{F263E089-800D-4C8C-9728-73914F6486B5} = {F263E089-800D-4C8C-9728-73914F6486B5}
 	EndProjectSection
 EndProject
 Project("{002A2DE9-8BB6-484D-9802-7E4AD4084715}") = "TLSFixerUnittest", "TLSFixerUnittest.visualdproj", "{E04FC28C-2C03-4234-8609-9E2A20749C17}"
-	ProjectSection(ProjectDependencies) = postProject
-		{D5E98716-B571-4FD6-A5B0-8CB397C26FB8} = {D5E98716-B571-4FD6-A5B0-8CB397C26FB8}
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -6,8 +6,6 @@ import std.utf: toUTF16z;
 import std.exception: enforce;
 import std.string: toStringz;
 
-import tlsfixer.tlsfixes;
-
 
 alias extern(C) void function() nothrow VoidFunc;
 alias extern(C) int  function() nothrow GetIntFunc;
@@ -27,7 +25,7 @@ void testLibrary(HANDLE h, size_t testIndex = 0)
 	immutable int tlsIndex = call("getTLSIndex");
 
 	assert(tlsLoaded == !!tlsIndex);
-	enforce(tlsIndex == currTLSIndex);
+	enforce(tlsIndex == currTLSIndex + tlsLoaded);
 
 
 	immutable int tlsVarDesiredValue = call("getTLSVarDesiredValue");
@@ -65,7 +63,7 @@ void main()
 
 
 	// Fixed
-	fixLibraryLoading();
+	enforce(LoadLibraryA("TLSFixerDLL"));
 	tlsLoaded = true;
 	
 	currTLSIndex = 1;
