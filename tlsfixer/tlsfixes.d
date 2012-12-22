@@ -47,10 +47,6 @@ void fixLibraryLoading() {
 
 	initializeDllTlsModule();
 
-	// NOTE: validateLoadedModules can throw an error
-	// so LdrUnlockLoaderLock may not be called.
-	validateLoadedModules();
-
 	void* dllMainCallAddress;
 	{
 		void* pLdrLoadDll = enforce(GetProcAddress(ntdll, "LdrLoadDll"));
@@ -126,10 +122,6 @@ void fixLibraryLoading() {
 
 
 	libraryLoadingFixed = true;
-}
-
-void validateLoadedModules() {
-	//auto modules = getCurruptedModules();
 }
 
 private:
@@ -234,5 +226,3 @@ void afterDllMainCalled(HINSTANCE hinstDLL, DWORD reason, LPVOID reserved) nothr
 	bool done = freeDllTls(hinstDLL, cast(int*) itd.AddressOfIndex);
 	assert(done);
 }
-
-//void onProcessAttach(HINSTANCE dllModule,
