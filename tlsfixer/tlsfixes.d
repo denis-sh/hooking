@@ -51,9 +51,33 @@ void fixLibraryLoading() {
 	// so LdrUnlockLoaderLock may not be called.
 	validateLoadedModules();
 
-	// FIXME: get DllMain caller addresses dynamically for current ntdll.dll
+	void* dllMainCallAddress;
+	{
+		void* pLdrLoadDll = enforce(GetProcAddress(ntdll, "LdrLoadDll"));
 
-	void* dllMainCallAddress = cast(void*) 0x7C901187;
+		void* pFunc1 = enforce(findCodeReference(pLdrLoadDll,
+			0x120, x"FFB5 C0FDFFFF  E8 ",  // ... call __Func1;
+			true));
+
+		void* pLabel2 = enforce(findCodeReference(pFunc1,
+			0x90, x"66 8B08  66 3BCB  0F84 ",  // ... je __Label2;
+			true));
+
+		void* pFunc3 = enforce(findCodeReference(pLabel2,
+			0x200, x"FFB5 C8FDFFFF  FFD0  C745 FC 02000000  53  E8 ",  // ... call __Func3;
+			true));
+
+		void* pLabel4 = enforce(findCodeReference(pFunc3,
+			0x200, x"8B45 E0  8945 D8  EB ",  // ... jmp short __Label4;
+			true, 1));
+
+		void* pFunc5 = enforce(findCodeReference(pLabel4,
+			0x130, x"47  57  FF76 18  53  E8 ",  // ... call __Func5;
+			true));
+
+		dllMainCallAddress = enforce(findCodeSequence(pFunc5,
+			0x15, x"FF75 10  FF75 0C"));
+	}
 
 	insertJump(
 		cast(void*) &nakedDllMainCaller + (/*push*/ 3 + /*call*/ 5 + /*mov*/ 2),
@@ -71,19 +95,22 @@ void fixLibraryLoading() {
 	// Insert our hook in the memory freeing function (something like LdrpFreeTls in ReactOS)
 	// called by LdrShutdownThread just before function that calls RtlLeaveCriticalSection
 
-	void* pLdrShutdownThread = enforce(GetProcAddress(ntdll, "LdrShutdownThread"));
+	void* inLdrpFreeTls;
+	{
+		void* pLdrShutdownThread = enforce(GetProcAddress(ntdll, "LdrShutdownThread"));
 
-	void* pLabel1 = enforce(findCodeReference(pLdrShutdownThread,
-		0x40, x"8B58 20  895D E4  EB ",  // ... jmp short __Label1;
-		true, 1));
+		void* pLabel1 = enforce(findCodeReference(pLdrShutdownThread,
+			0x40, x"8B58 20  895D E4  EB ",  // ... jmp short __Label1;
+			true, 1));
 
-	void* pLabel2 = enforce(findCodeReference(pLabel1,
-		0x40, x"3BD8  0F84 ",  // ... je __Label2;
-		true));
+		void* pLabel2 = enforce(findCodeReference(pLabel1,
+			0x40, x"3BD8  0F84 ",  // ... je __Label2;
+			true));
 
-	void* pLabel3 = getRelativeTarget(pLabel2 + 0xE);
+		void* pLabel3 = getRelativeTarget(pLabel2 + 0xE);
 
-	void* inLdrpFreeTls = pLabel3 + 9;
+		inLdrpFreeTls = pLabel3 + 9;
+	}
 
 	insertJump(
 		cast(void*) &nakedOnLdrShutdownThread + (/*push EAX*/ 1 + /*call*/ 5 + /*pop EAX*/ 1 + /*origin code*/ 5),
