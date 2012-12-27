@@ -36,7 +36,8 @@ static:
 		alias NTSTATUS function(ULONG Flags, ULONG Cookie) FuncLdrUnlockLoaderLock;
 	}
 
-	debug ULONG RtlCheckBit(RTL_BITMAP* BitMapHeader, ULONG BitNumber) nothrow
+	// RtlCheckBit is used only in `assert`
+	ULONG RtlCheckBit(RTL_BITMAP* BitMapHeader, ULONG BitNumber) nothrow
 	in { assert(BitNumber < BitMapHeader.SizeOfBitMap); }
 	body
 	{
