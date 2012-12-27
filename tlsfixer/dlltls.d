@@ -175,14 +175,14 @@ bool freeDllTls(HINSTANCE hInstance, int* tlsindex) nothrow
 }
 
 void onLdrShutdownThread() nothrow {
-	foreach(ref array; leakedTlsArrays[0 .. leakedTlsArraysCount]) {
+	foreach(ref array; leakedTls.arrays[0 .. leakedTls.arraysCount]) {
 		freeProcessHeap(array.ptr);
-		leakedBytes -= array.length;
+		leakedTls.bytes -= array.length;
 		totalLeakedBytes -= array.length;
 		array = null;
 	}
-	assert(!leakedBytes);
-	leakedTlsArraysCount = 0;
+	assert(!leakedTls.bytes);
+	leakedTls.arraysCount = 0;
 }
 
 private:
@@ -317,8 +317,14 @@ void removeTlsListEntry(LdrpTlsListEntry* entry) nothrow
 }
 
 __gshared size_t totalLeakedBytes;
-size_t leakedTlsArraysCount, leakedBytes;
-void*[][32] leakedTlsArrays;
+
+struct LeakedTls
+{
+	size_t arraysCount, bytes;
+	void*[][32] arrays;
+}
+
+LeakedTls leakedTls;
 
 // Create a copy of the TLS data section and reallocate TLS array if needed
 bool addTlsData(void** teb, in void* tlsstart, in void* tlsend, in int tlsindex) nothrow
@@ -344,8 +350,8 @@ bool addTlsData(void** teb, in void* tlsstart, in void* tlsend, in int tlsindex)
 		memset(newArray + tlsArrayLength, 0, (newLength - tlsArrayLength) * (void*).sizeof);
 
 		// let the old array leak, in case a oncurrent thread is still relying on it
-		leakedTlsArrays[leakedTlsArraysCount++] = tlsArray[0 .. tlsArrayLength];
-		leakedBytes += tlsArrayLength * (void*).sizeof;
+		leakedTls.arrays[leakedTls.arraysCount++] = tlsArray[0 .. tlsArrayLength];
+		leakedTls.bytes += tlsArrayLength * (void*).sizeof;
 		totalLeakedBytes += tlsArrayLength * (void*).sizeof;
 
 		tlsArrayLength = newLength;
