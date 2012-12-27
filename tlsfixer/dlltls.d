@@ -37,12 +37,12 @@ body
 }
 
 
-void initializeDllTlsModule()
+void initializeDllTlsModule() nothrow
 {
 	__gshared bool initialized = false;
 	if(initialized)
 		return;
-	scope(success) initialized = true;
+
 	enforceErr(Ntdll.load());
 
 
@@ -96,6 +96,8 @@ L:
         if(auto id = getImageTlsDirectory(ldrMod.BaseAddress))
 			Ntdll.RtlSetBit(&tlsBitmap, *cast(uint*) id.AddressOfIndex);
 	}
+
+	initialized = true;
 }
 
 /* *****************************************************
