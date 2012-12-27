@@ -12,7 +12,6 @@ module tlsfixer.tlsfixes;
 import std.c.windows.windows;
 import tlsfixer.dlltls;
 import hooking.windows.c.winternl: NTSTATUS;
-import hooking.windows.pe;
 import hooking.x86.utils;
 import hooking.x86.interceptor;
 import std.exception;
@@ -175,7 +174,7 @@ body {
 	debug(tlsfixes) {
 		char[MAX_PATH + 1] s;
 		try enforce(GetModuleFileNameA(hinstDLL, s.ptr, s.length)); catch { }
-		const debug_itd = PEFile(hinstDLL, true).imageTlsDirectory;
+		const debug_itd = getImageTlsDirectory(hinstDLL);
 		if(debug_itd) {
 			final switch(reason) {
 				case 1: printf("DLL_PROCESS_ATTACH (loaded %s)",
@@ -194,7 +193,7 @@ body {
 	if(reason != 1)
 		return; // Not DLL_PROCESS_ATTACH
 	
-	const itd = PEFile(hinstDLL, true).imageTlsDirectory;
+	const itd = getImageTlsDirectory(hinstDLL);
 	if(!itd)
 		return; // No implicit TLS
 	debug(tlsfixes) puts("Setting TLS...");
@@ -218,7 +217,7 @@ void afterDllMainCalled(HINSTANCE hinstDLL, DWORD reason, LPVOID reserved) nothr
 	if(reason != 0)
 		return; // Not DLL_PROCESS_DETACH
 
-	const itd = PEFile(hinstDLL, true).imageTlsDirectory;
+	const itd = getImageTlsDirectory(hinstDLL);
 	if(!itd)
 		return; // No implicit TLS
 	debug(tlsfixes) puts("Freeing TLS...");

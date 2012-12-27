@@ -28,6 +28,9 @@ static:
 
 		alias void function(RTL_BITMAP* BitMapHeader, PULONG BitMapBuffer, ULONG SizeOfBitMap) FuncRtlInitializeBitMap;
 		alias ULONG function(RTL_BITMAP* BitMapHeader, ULONG NumberToFind, ULONG HintIndex) FuncRtlFindClearBitsAndSet;
+
+		alias PVOID function (PVOID Base, BOOLEAN MappedAsImage, USHORT DirectoryEntry, PULONG Size)
+			FuncRtlImageDirectoryEntryToData;
 	}
 
 	debug ULONG RtlCheckBit(RTL_BITMAP* BitMapHeader, ULONG BitNumber) nothrow
@@ -58,6 +61,8 @@ static:
 
 		FuncRtlInitializeBitMap     RtlInitializeBitMap;
 		FuncRtlFindClearBitsAndSet  RtlFindClearBitsAndSet;
+
+		FuncRtlImageDirectoryEntryToData  RtlImageDirectoryEntryToData;
 
 		int* pNtdllBaseTag;
 		
@@ -90,7 +95,9 @@ static:
 		   !loadFunc!RtlFreeHeap() ||
 
 		   !loadFunc!RtlInitializeBitMap() ||
-		   !loadFunc!RtlFindClearBitsAndSet())
+		   !loadFunc!RtlFindClearBitsAndSet() ||
+
+		   !loadFunc!RtlImageDirectoryEntryToData())
 			return false;
 
 		void* pLdrpInitialize = findCodeReference( fn, 20, jmp_LdrpInitialize, true );
@@ -193,3 +200,15 @@ struct PEB_LDR_DATA
 	LIST_ENTRY      InMemoryOrderModuleList;
 	LIST_ENTRY      InInitializationOrderModuleList;
 }
+
+struct IMAGE_TLS_DIRECTORY32 {
+	DWORD   StartAddressOfRawData;
+	DWORD   EndAddressOfRawData;
+	DWORD   AddressOfIndex;             // PDWORD
+	DWORD   AddressOfCallBacks;         // PIMAGE_TLS_CALLBACK *
+	DWORD   SizeOfZeroFill;
+	DWORD   Characteristics;
+}
+
+version(Win32) alias IMAGE_TLS_DIRECTORY32 IMAGE_TLS_DIRECTORY;
+else static assert(0);

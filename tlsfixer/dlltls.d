@@ -13,13 +13,23 @@ module tlsfixer.dlltls;
 import core.stdc.string: memcpy, memset;
 import core.sys.windows.windows;
 import core.sys.windows.threadaux;
-import hooking.windows.pe;
 import std.exception: enforce, enforceEx;
 import std.string: xformat;
 
 import unstd.math: roundUpToPowerOf2;
 
 import tlsfixer.ntdll;
+
+
+const(IMAGE_TLS_DIRECTORY)* getImageTlsDirectory(void* moduleBase) nothrow
+in { assert(!(cast(size_t) moduleBase & 0xFFFF)); }
+body
+{
+	ULONG size;
+	void* res = Ntdll.RtlImageDirectoryEntryToData(moduleBase, true, 9 /* IMAGE_DIRECTORY_ENTRY_TLS */, &size);
+	assert(!res || size == IMAGE_TLS_DIRECTORY.sizeof);
+	return cast(typeof(return)) res;
+}
 
 
 void initializeDllTlsModule()
@@ -38,7 +48,7 @@ void initializeDllTlsModule()
 L:
 	foreach(ldrMod; loadedModules)
     {
-		const id = PEFile(ldrMod.BaseAddress, true).imageTlsDirectory;
+		const id = getImageTlsDirectory(ldrMod.BaseAddress);
         if(!id)
             continue; // No TLS directory
 
@@ -78,7 +88,7 @@ L:
 	useTlsIndex(maxTlsIndex);
 	foreach(ldrMod; loadedModules)
     {
-        if(auto id = PEFile(ldrMod.BaseAddress, true).imageTlsDirectory)
+        if(auto id = getImageTlsDirectory(ldrMod.BaseAddress))
 			Ntdll.RtlSetBit(&tlsBitmap, *cast(uint*) id.AddressOfIndex);
 	}
 }
