@@ -8,8 +8,6 @@ Authors: Denis Shelomovskij
 */
 module hooking.x86.utils;
 
-import std.traits: Signed;
-
 inout(void)* getAbsoluteTarget(inout(void)* address) nothrow
 {
 	return *cast(inout(void)**) address;
