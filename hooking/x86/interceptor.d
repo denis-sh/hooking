@@ -163,7 +163,7 @@ body
 	*ptr = 0xE9; // JMP rel32
 	*cast(const(void)**) (ptr+1) = target - (cast(size_t) ptr + 5);
 	foreach(i; 5 .. n)
-		*(ptr + i) = 0x90; // NOP
+		*(ptr + i) = 0xCC; // INT3
 	memory.changeProtection(cast(size_t) ptr, n, oldProtect);
 	enforce(FlushInstructionCache(memory.processHandle, ptr, n));
 }
