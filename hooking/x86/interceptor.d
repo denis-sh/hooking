@@ -168,20 +168,20 @@ body
 	enforce(FlushInstructionCache(memory.processHandle, ptr, n));
 }
 
-void writeAsm(T)(ref ubyte* ptr, in T[] tarr...)
+void writeAsm(T)(ref ubyte* ptr, in T[] tarr...) nothrow
 {
 	auto barr = cast(const(ubyte)[]) tarr;
 	ptr[0 .. barr.length] = barr;
 	ptr += barr.length;
 }
 
-void writeAsms(A...)(ref ubyte* ptr, A args)
+void writeAsms(A...)(ref ubyte* ptr, A args) nothrow
 {
 	foreach(arg; args)
 		writeAsm(ptr, arg);
 }
 
-void writeRel32(ref ubyte* ptr, ubyte op, void* target)
+void writeRel32(ref ubyte* ptr, ubyte op, void* target) nothrow
 {
 	*ptr = op;
 	*cast(const(void)**) (ptr+1) = target - (cast(size_t) ptr + 5);
