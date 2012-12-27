@@ -25,9 +25,11 @@ body
 /// Find a code sequence and return the address after the sequence
 inout(void)* findCodeSequence(inout(void)* startAddress, size_t len, string pattern) nothrow
 {
+	import core.stdc.string: memcmp;
+
 	if(startAddress)
 		foreach(p; 0 .. len)
-			if(startAddress[p .. p + pattern.length] == pattern)
+			if(memcmp(startAddress + p, pattern.ptr, pattern.length) == 0)
 				return startAddress + p + pattern.length;
 	return null;
 }
