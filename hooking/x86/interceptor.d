@@ -8,7 +8,7 @@ Authors: Denis Shelomovskij
 */
 module hooking.x86.interceptor;
 
-import std.c.windows.windows;
+import core.sys.windows.windows;
 import std.exception;
 import std.string;
 

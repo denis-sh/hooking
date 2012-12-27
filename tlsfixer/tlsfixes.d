@@ -9,7 +9,7 @@ Authors: Denis Shelomovskij
 */
 module tlsfixer.tlsfixes;
 
-import std.c.windows.windows;
+import core.sys.windows.windows;
 import tlsfixer.ntdll;
 import tlsfixer.dlltls;
 import hooking.x86.utils;

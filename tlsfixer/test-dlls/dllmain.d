@@ -1,6 +1,6 @@
 module dllmain;
 
-import std.c.windows.windows;
+import core.sys.windows.windows;
 import core.sys.windows.dll;
 
 enum int tlsVarDesiredValue = mixin(import("tlsVarDesiredValue"));

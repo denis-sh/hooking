@@ -8,7 +8,7 @@ Authors: Denis Shelomovskij
 */
 module hooking.windows.pe;
 
-import std.c.windows.windows;
+import core.sys.windows.windows;
 import core.sys.windows.dll;
 import core.sys.windows.threadaux;
 
