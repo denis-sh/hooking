@@ -13,13 +13,18 @@ module tlsfixer.dlltls;
 import core.stdc.string: memcpy, memset;
 import core.sys.windows.windows;
 import core.sys.windows.threadaux;
-import std.exception: enforce, enforceEx;
 import std.string: xformat;
 
 import unstd.math: roundUpToPowerOf2;
 
 import tlsfixer.ntdll;
 
+
+T enforceErr(T)(T value, lazy const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__) nothrow
+{
+	if(!value) throw new Error(msg ? msg.idup : "Enforcement failed", file, line);
+	return value;
+}
 
 const(IMAGE_TLS_DIRECTORY)* getImageTlsDirectory(void* moduleBase) nothrow
 in { assert(!(cast(size_t) moduleBase & 0xFFFF)); }
@@ -38,7 +43,7 @@ void initializeDllTlsModule()
 	if(initialized)
 		return;
 	scope(success) initialized = true;
-	enforce(Ntdll.load());
+	enforceErr(Ntdll.load());
 
 
 	size_t maxTlsIndex = 0, modulesWithTls = 0;
@@ -70,16 +75,16 @@ L:
 		curruptedModules ~= name.Buffer[0 .. name.Length / 2];
     }
 
-	enforceEx!Error(!curruptedModules, xformat(
+	enforceErr(!curruptedModules, xformat(
 		"There are already loaded module%s with broken TLS:\n%( %(%c%)\n%)",
 		curruptedModules.length == 1 ? "" : "s", curruptedModules));
 
 	numberOfTlsEntries = *Ntdll.pLdrpNumberOfTlsEntries;
-	enforceEx!Error(modulesWithTls == numberOfTlsEntries, xformat(
+	enforceErr(modulesWithTls == numberOfTlsEntries, xformat(
 		"Loaded module with TLS count = %s != %s = LdrpNumberOfTlsEntries",
 		modulesWithTls, numberOfTlsEntries));
 
-	enforceEx!Error(maxTlsIndex + 1 == numberOfTlsEntries, "maxTlsIndex + 1 != numberOfTlsEntries");
+	enforceErr(maxTlsIndex + 1 == numberOfTlsEntries, "maxTlsIndex + 1 != numberOfTlsEntries");
 
 
 	// Fill TLS bitmap

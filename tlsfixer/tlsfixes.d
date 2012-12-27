@@ -14,7 +14,6 @@ import tlsfixer.ntdll;
 import tlsfixer.dlltls;
 import hooking.x86.utils;
 import hooking.x86.interceptor;
-import std.exception;
 
 debug(tlsfixes) import std.stdio;
 
@@ -32,7 +31,7 @@ void fixLibraryLoading() {
 	if(libraryLoadingFixed)
 		return;
 
-	enforce(Ntdll.load());
+	enforceErr(Ntdll.load());
 
 	auto ntdll = GetModuleHandleA("ntdll");
 
@@ -45,29 +44,29 @@ void fixLibraryLoading() {
 
 	void* dllMainCallAddress;
 	{
-		void* pLdrLoadDll = enforce(GetProcAddress(ntdll, "LdrLoadDll"));
+		void* pLdrLoadDll = enforceErr(GetProcAddress(ntdll, "LdrLoadDll"));
 
-		void* pFunc1 = enforce(findCodeReference(pLdrLoadDll,
+		void* pFunc1 = enforceErr(findCodeReference(pLdrLoadDll,
 			0x120, x"FFB5 C0FDFFFF  E8 ",  // ... call __Func1;
 			true));
 
-		void* pLabel2 = enforce(findCodeReference(pFunc1,
+		void* pLabel2 = enforceErr(findCodeReference(pFunc1,
 			0x90, x"66 8B08  66 3BCB  0F84 ",  // ... je __Label2;
 			true));
 
-		void* pFunc3 = enforce(findCodeReference(pLabel2,
+		void* pFunc3 = enforceErr(findCodeReference(pLabel2,
 			0x200, x"FFB5 C8FDFFFF  FFD0  C745 FC 02000000  53  E8 ",  // ... call __Func3;
 			true));
 
-		void* pLabel4 = enforce(findCodeReference(pFunc3,
+		void* pLabel4 = enforceErr(findCodeReference(pFunc3,
 			0x200, x"8B45 E0  8945 D8  EB ",  // ... jmp short __Label4;
 			true, 1));
 
-		void* pFunc5 = enforce(findCodeReference(pLabel4,
+		void* pFunc5 = enforceErr(findCodeReference(pLabel4,
 			0x130, x"47  57  FF76 18  53  E8 ",  // ... call __Func5;
 			true));
 
-		dllMainCallAddress = enforce(findCodeSequence(pFunc5,
+		dllMainCallAddress = enforceErr(findCodeSequence(pFunc5,
 			0x15, x"FF75 10  FF75 0C"));
 	}
 
@@ -89,13 +88,13 @@ void fixLibraryLoading() {
 
 	void* inLdrpFreeTls;
 	{
-		void* pLdrShutdownThread = enforce(GetProcAddress(ntdll, "LdrShutdownThread"));
+		void* pLdrShutdownThread = enforceErr(GetProcAddress(ntdll, "LdrShutdownThread"));
 
-		void* pLabel1 = enforce(findCodeReference(pLdrShutdownThread,
+		void* pLabel1 = enforceErr(findCodeReference(pLdrShutdownThread,
 			0x40, x"8B58 20  895D E4  EB ",  // ... jmp short __Label1;
 			true, 1));
 
-		void* pLabel2 = enforce(findCodeReference(pLabel1,
+		void* pLabel2 = enforceErr(findCodeReference(pLabel1,
 			0x40, x"3BD8  0F84 ",  // ... je __Label2;
 			true));
 
@@ -170,7 +169,7 @@ in { assert(reason < 4, "Unexpected reason"); }
 body {
 	debug(tlsfixes) {
 		char[MAX_PATH + 1] s;
-		try enforce(GetModuleFileNameA(hinstDLL, s.ptr, s.length)); catch { }
+		enforceErr(GetModuleFileNameA(hinstDLL, s.ptr, s.length));
 		const debug_itd = getImageTlsDirectory(hinstDLL);
 		if(debug_itd) {
 			final switch(reason) {
