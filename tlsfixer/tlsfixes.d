@@ -10,8 +10,8 @@ Authors: Denis Shelomovskij
 module tlsfixer.tlsfixes;
 
 import std.c.windows.windows;
+import tlsfixer.ntdll;
 import tlsfixer.dlltls;
-import hooking.windows.c.winternl: NTSTATUS;
 import hooking.x86.utils;
 import hooking.x86.interceptor;
 import std.exception;
@@ -32,16 +32,13 @@ void fixLibraryLoading() {
 	if(libraryLoadingFixed)
 		return;
 
-	alias extern(Windows) NTSTATUS function(ULONG Flags, ULONG *State, ULONG *Cookie) nothrow LdrLockLoaderLockType;
-	alias extern(Windows) NTSTATUS function(ULONG Flags, ULONG Cookie) nothrow LdrUnlockLoaderLockType;
+	enforce(Ntdll.load());
 
 	auto ntdll = GetModuleHandleA("ntdll");
-	auto LdrLockLoaderLock   = cast(LdrLockLoaderLockType  ) enforce(GetProcAddress(ntdll, "LdrLockLoaderLock"));
-	auto LdrUnlockLoaderLock = cast(LdrUnlockLoaderLockType) enforce(GetProcAddress(ntdll, "LdrUnlockLoaderLock"));
 
 	ULONG cookie;
-	LdrLockLoaderLock(1, null, &cookie);
-	scope(exit) LdrUnlockLoaderLock(1, cookie);
+	Ntdll.LdrLockLoaderLock(1, null, &cookie);
+	scope(exit) Ntdll.LdrUnlockLoaderLock(1, cookie);
 	if(libraryLoadingFixed) return;
 
 	initializeDllTlsModule();

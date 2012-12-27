@@ -13,7 +13,7 @@ module tlsfixer.ntdll;
 
 import core.sys.windows.windows;
 
-import hooking.windows.c.winternl: UNICODE_STRING;
+import hooking.windows.c.winternl: NTSTATUS, UNICODE_STRING;
 import hooking.x86.utils;
 
 
@@ -31,6 +31,9 @@ static:
 
 		alias PVOID function (PVOID Base, BOOLEAN MappedAsImage, USHORT DirectoryEntry, PULONG Size)
 			FuncRtlImageDirectoryEntryToData;
+
+		alias NTSTATUS function(ULONG Flags, ULONG *State, ULONG *Cookie) FuncLdrLockLoaderLock;
+		alias NTSTATUS function(ULONG Flags, ULONG Cookie) FuncLdrUnlockLoaderLock;
 	}
 
 	debug ULONG RtlCheckBit(RTL_BITMAP* BitMapHeader, ULONG BitNumber) nothrow
@@ -63,6 +66,9 @@ static:
 		FuncRtlFindClearBitsAndSet  RtlFindClearBitsAndSet;
 
 		FuncRtlImageDirectoryEntryToData  RtlImageDirectoryEntryToData;
+
+		FuncLdrLockLoaderLock LdrLockLoaderLock;
+		FuncLdrUnlockLoaderLock LdrUnlockLoaderLock;
 
 		int* pNtdllBaseTag;
 		
@@ -97,7 +103,10 @@ static:
 		   !loadFunc!RtlInitializeBitMap() ||
 		   !loadFunc!RtlFindClearBitsAndSet() ||
 
-		   !loadFunc!RtlImageDirectoryEntryToData())
+		   !loadFunc!RtlImageDirectoryEntryToData() ||
+
+		   !loadFunc!LdrLockLoaderLock() ||
+		   !loadFunc!LdrUnlockLoaderLock())
 			return false;
 
 		void* pLdrpInitialize = findCodeReference( fn, 20, jmp_LdrpInitialize, true );
