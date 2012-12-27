@@ -391,7 +391,8 @@ struct Process
 	{
 		auto threadIds = getThreadIds();
 		assert(threadIds.length == 1);
-		initializeWindowsStuff(Thread(threadIds[0], 0, false));
+		auto thread = Thread(threadIds[0], 0, false);
+		initializeWindowsStuff(thread);
 	}
 
 	unittest
