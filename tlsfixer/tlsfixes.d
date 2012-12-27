@@ -13,7 +13,6 @@ import std.c.windows.windows;
 import tlsfixer.ntdll;
 import tlsfixer.dlltls;
 import hooking.x86.utils;
-import hooking.x86.interceptor;
 
 debug(tlsfixes) import std.stdio;
 
@@ -220,4 +219,24 @@ void afterDllMainCalled(HINSTANCE hinstDLL, DWORD reason, LPVOID reserved) nothr
 
 	bool done = freeDllTls(hinstDLL, cast(int*) itd.AddressOfIndex);
 	assert(done);
+}
+
+void insertJump(void* originAddress, in char[] originCode, const(void)* target)
+in { assert(originCode.length >= 5); }
+body
+{
+	ubyte* ptr = cast(ubyte*) originAddress;
+	immutable n = originCode.length;
+	import core.stdc.string: memcmp;
+	enforceErr(memcmp(ptr, originCode.ptr, n) == 0);
+
+	auto processHandle = enforceErr(GetCurrentProcess());
+	DWORD oldProtection;
+	enforceErr(VirtualProtectEx(processHandle, ptr, n, PAGE_EXECUTE_READWRITE, &oldProtection));
+	*ptr = 0xE9; // JMP rel32
+	*cast(const(void)**) (ptr+1) = target - (cast(size_t) ptr + 5);
+	foreach(i; 5 .. n)
+		*(ptr + i) = 0xCC; // INT3
+	enforceErr(VirtualProtectEx(processHandle, ptr, n, oldProtection, &oldProtection));
+	enforceErr(FlushInstructionCache(processHandle, ptr, n));
 }
