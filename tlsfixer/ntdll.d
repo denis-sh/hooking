@@ -60,6 +60,8 @@ static:
 
 
 	__gshared {
+		HMODULE hmodule;
+
 		FuncRtlAllocateHeap  RtlAllocateHeap;
 		FuncRtlFreeHeap      RtlFreeHeap;
 
@@ -88,13 +90,12 @@ static:
 		if(loaded)
 			return true;
 
-		HMODULE hnd = GetModuleHandleA( "NTDLL" );
-		assert( hnd, "cannot get module handle for ntdll" );
-		void* fn = GetProcAddress( hnd, "LdrInitializeThunk" );
-		assert( fn, "cannot find LdrInitializeThunk in ntdll" );
+		hmodule = GetModuleHandleA("NTDLL");
+		if(!hmodule)
+			return false;
 
 		bool loadFunc(alias func)() {
-			func = cast(typeof(func)) GetProcAddress(hnd, func.stringof.ptr);
+			func = cast(typeof(func)) GetProcAddress(hmodule, func.stringof.ptr);
 			return !!func;
 		}
 
@@ -110,7 +111,11 @@ static:
 		   !loadFunc!LdrUnlockLoaderLock())
 			return false;
 
-		void* pLdrpInitialize = findCodeReference( fn, 20, jmp_LdrpInitialize, true );
+		void* pLdrInitializeThunk = GetProcAddress(hmodule, "LdrInitializeThunk");
+		if(!pLdrInitializeThunk)
+			return false;
+
+		void* pLdrpInitialize = findCodeReference( pLdrInitializeThunk, 20, jmp_LdrpInitialize, true );
 		void* p_LdrpInitialize = findCodeReference( pLdrpInitialize, 40, jmp__LdrpInitialize, true );
 		if( !p_LdrpInitialize )
 			p_LdrpInitialize = findCodeSequence( pLdrpInitialize, 40, jmp__LdrpInitialize_xp64 );
