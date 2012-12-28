@@ -13,7 +13,7 @@ module tlsfixer.ntdll;
 
 import core.sys.windows.windows;
 
-import hooking.windows.c.winternl: NTSTATUS, UNICODE_STRING;
+import hooking.windows.c.winternl: NTSTATUS, UNICODE_STRING, FuncNtQuerySystemInformation = NtQuerySystemInformation;
 import hooking.x86.utils;
 
 
@@ -73,6 +73,8 @@ static:
 		FuncLdrLockLoaderLock LdrLockLoaderLock;
 		FuncLdrUnlockLoaderLock LdrUnlockLoaderLock;
 
+		FuncNtQuerySystemInformation NtQuerySystemInformation;
+
 		int* pNtdllBaseTag;
 		
 		// On thread start TLS is allocated for each element of
@@ -108,7 +110,9 @@ static:
 		   !loadFunc!RtlImageDirectoryEntryToData() ||
 
 		   !loadFunc!LdrLockLoaderLock() ||
-		   !loadFunc!LdrUnlockLoaderLock())
+		   !loadFunc!LdrUnlockLoaderLock() ||
+
+		   !loadFunc!NtQuerySystemInformation())
 			return false;
 
 		void* pLdrInitializeThunk = GetProcAddress(hmodule, "LdrInitializeThunk");

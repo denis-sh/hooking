@@ -10,6 +10,7 @@ Authors: Denis Shelomovskij
 */
 module tlsfixer.dlltls;
 
+import core.stdc.stdlib: free;
 import core.stdc.string: memcpy, memset;
 import core.sys.windows.windows;
 import core.sys.windows.threadaux;
@@ -18,6 +19,7 @@ import std.string: xformat;
 import unstd.math: roundUpToPowerOf2;
 
 import tlsfixer.ntdll;
+import tlsfixer.winutils;
 
 
 T enforceErr(T)(T value, lazy const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__) nothrow
@@ -142,13 +144,13 @@ bool setDllTls(HINSTANCE hInstance, void* tlsstart, void* tlsend, void* tls_call
     const tlsEntry = addTlsListEntry(tlsstart, tlsend, tls_callbacks_a, tlsindex);
     if(!tlsEntry) return false;
 
-    if(!enumProcessThreadsNothrow(
-		function (uint id, in void* context) nothrow
-		{
-			const tlsEntry = cast(LdrpTlsListEntry*) context;
-			return addTlsData(getTEB(id), tlsEntry.tlsstart, tlsEntry.tlsend, tlsEntry.tlsindex);
-		}, tlsEntry))
+	auto threadIds = getCurrentProcessThreadIds();
+	if(!threadIds)
         return false;
+	foreach(threadId; threadIds)
+		if(!addTlsData(getTEB(threadId), tlsEntry.tlsstart, tlsEntry.tlsend, tlsEntry.tlsindex))
+			return free(threadIds.ptr), false;
+	free(threadIds.ptr);
 
     ldrMod.TlsIndex = -1;  // flag TLS usage (not the index itself)
     //ldrMod.LoadCount = -1; // prevent unloading of the DLL,
@@ -165,14 +167,12 @@ bool freeDllTls(HINSTANCE hInstance, int* tlsindex) nothrow
 
 	assert(tlsEntry.ptr_tlsindex == tlsindex);
 
-    if(!enumProcessThreadsNothrow(
-		function (uint id, in void* context) nothrow
-		{
-			const tlsEntry = cast(LdrpTlsListEntry*) context;
-			removeTlsData(getTEB(id), tlsEntry.tlsindex);
-			return true;
-		}, tlsEntry))
+	auto threadIds = getCurrentProcessThreadIds();
+	if(!threadIds)
         return false;
+	foreach(threadId; threadIds)
+		removeTlsData(getTEB(threadId), tlsEntry.tlsindex);
+	free(threadIds.ptr);
 
 	removeTlsListEntry(tlsEntry);
 
@@ -197,13 +197,6 @@ void onLdrShutdownThread() nothrow {
 }
 
 private:
-
-// Like `core.sys.windows.threadaux.enumProcessThreadsNothrow` but `nothrow` and with `in void* context`
-bool enumProcessThreadsNothrow(bool function(uint id, in void* context) nothrow dg, in void* context) nothrow
-{
-	try return enumProcessThreads(cast(bool function(uint, void*) nothrow) dg, cast(void*) context);
-	catch assert(0); // as the only thing that can throw in `enumProcessThreads` is `dg`
-}
 
 void** getPEB() nothrow
 {

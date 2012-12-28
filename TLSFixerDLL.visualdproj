@@ -187,6 +187,7 @@
  <Folder name="TLSFixerDLL">
   <Folder name="tlsfixer">
    <File path="tlsfixer\ntdll.d" />
+   <File path="tlsfixer\winutils.d" />
    <File path="tlsfixer\dlltls.d" />
    <File path="tlsfixer\tlsfixes.d" />
    <File path="tlsfixer\dllmain.d" />
