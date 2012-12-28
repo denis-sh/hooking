@@ -97,6 +97,8 @@ L:
 			Ntdll.RtlSetBit(&tlsBitmap, *cast(uint*) id.AddressOfIndex);
 	}
 
+	processHeap = enforceErr(GetProcessHeap());
+
 	initialized = true;
 }
 
@@ -373,21 +375,21 @@ body
 }
 
 
+__gshared HANDLE processHeap;
+
 void* allocateProcessHeap(size_t size) nothrow
 in { assert(size); }
-out(res) { assert(res); }
 body
 {
 	// Adding 0xC0000 to the tag is obviously a flag also usesd by the nt-loader,
 	// could be the result of HEAP_MAKE_TAG_FLAGS(0, HEAP_NO_SERIALIZE | HEAP_GROWABLE)
 	// but this is not documented in the msdn entry for RtlAlloateHeap
-	return Ntdll.RtlAllocateHeap(GetProcessHeap(), *Ntdll.pNtdllBaseTag | 0xC0000, size);
+	return enforceErr(Ntdll.RtlAllocateHeap(processHeap, *Ntdll.pNtdllBaseTag | 0xC0000, size));
 }
 
 void freeProcessHeap(void* heapBase) nothrow
 in { assert(heapBase); }
 body
 {
-	bool res = Ntdll.RtlFreeHeap(GetProcessHeap(), 0, heapBase);
-	assert(res);
+	enforceErr(Ntdll.RtlFreeHeap(processHeap, 0, heapBase));
 }
