@@ -97,6 +97,9 @@ L:
 			Ntdll.RtlSetBit(&tlsBitmap, *cast(uint*) id.AddressOfIndex);
 	}
 
+	leakedTlsIndex = TlsAlloc();
+	enforceErr(leakedTlsIndex != 0xFFFFFFFF /* TLS_OUT_OF_INDEXES */);
+
 	processHeap = enforceErr(GetProcessHeap());
 
 	initialized = true;
@@ -177,6 +180,11 @@ bool freeDllTls(HINSTANCE hInstance, int* tlsindex) nothrow
 }
 
 void onLdrShutdownThread() nothrow {
+	auto leakedTls = cast(LeakedTls*) TlsGetValue(leakedTlsIndex);
+	enforceErr(GetLastError() == ERROR_SUCCESS); // TlsGetValue always call SetLastError
+	if(!leakedTls)
+		return;
+
 	foreach(ref array; leakedTls.arrays[0 .. leakedTls.arraysCount]) {
 		freeProcessHeap(array.ptr);
 		leakedTls.bytes -= array.length;
@@ -184,7 +192,8 @@ void onLdrShutdownThread() nothrow {
 		array = null;
 	}
 	assert(!leakedTls.bytes);
-	leakedTls.arraysCount = 0;
+	freeProcessHeap(leakedTls);
+	debug enforceErr(TlsSetValue(leakedTlsIndex, cast(void*) -1));
 }
 
 private:
@@ -318,15 +327,17 @@ void removeTlsListEntry(LdrpTlsListEntry* entry) nothrow
 	freeProcessHeap(entry);
 }
 
-__gshared size_t totalLeakedBytes;
-
 struct LeakedTls
 {
 	size_t arraysCount, bytes;
 	void*[][32] arrays;
 }
 
-LeakedTls leakedTls;
+__gshared
+{
+	size_t totalLeakedBytes;
+	DWORD leakedTlsIndex;
+}
 
 // Create a copy of the TLS data section and reallocate TLS array if needed
 bool addTlsData(void** teb, in void* tlsstart, in void* tlsend, in int tlsindex) nothrow
@@ -350,6 +361,15 @@ bool addTlsData(void** teb, in void* tlsstart, in void* tlsend, in int tlsindex)
 		if(tlsindex)
 			memcpy(newArray, tlsArray, tlsArrayLength * (void*).sizeof);
 		memset(newArray + tlsArrayLength, 0, (newLength - tlsArrayLength) * (void*).sizeof);
+
+		auto leakedTls = cast(LeakedTls*) TlsGetValue(leakedTlsIndex);
+		enforceErr(GetLastError() == ERROR_SUCCESS); // TlsGetValue always call SetLastError
+		assert(leakedTls != cast(void*) -1);
+		if(!leakedTls)
+		{
+			leakedTls = cast(LeakedTls*) allocateProcessHeap(LeakedTls.sizeof, 8 /* HEAP_ZERO_MEMORY */);
+			enforceErr(TlsSetValue(leakedTlsIndex, leakedTls));
+		}
 
 		// let the old array leak, in case a oncurrent thread is still relying on it
 		leakedTls.arrays[leakedTls.arraysCount++] = tlsArray[0 .. tlsArrayLength];
