@@ -16,6 +16,36 @@ import hooking.windows.c.winternl;
 import tlsfixer.ntdll;
 
 
+T enforceErr(T)(T value, lazy const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__) nothrow
+{
+	if(!value) throw new Error(msg ? msg.idup : "Enforcement failed", file, line);
+	return value;
+}
+
+
+void initWinUtils() nothrow
+{
+	processHeap = enforceErr(GetProcessHeap());
+}
+
+
+private __gshared HANDLE processHeap;
+
+void* allocateProcessHeap(size_t size, uint flags = 0) nothrow
+in { assert(size); }
+body
+{
+	return enforceErr(Ntdll.RtlAllocateHeap(processHeap, flags, size));
+}
+
+void freeProcessHeap(void* heapBase) nothrow
+in { assert(heapBase); }
+body
+{
+	enforceErr(Ntdll.RtlFreeHeap(processHeap, 0, heapBase));
+}
+
+
 // Based on hooking.windows.process.Process.getThreadIds
 DWORD[] getCurrentProcessThreadIds() nothrow
 {

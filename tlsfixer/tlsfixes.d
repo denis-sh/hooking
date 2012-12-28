@@ -11,6 +11,7 @@ module tlsfixer.tlsfixes;
 
 import core.sys.windows.windows;
 import tlsfixer.ntdll;
+import tlsfixer.winutils;
 import tlsfixer.dlltls;
 import hooking.x86.utils;
 
@@ -31,6 +32,7 @@ void fixLibraryLoading() {
 		return;
 
 	enforceErr(Ntdll.load());
+	initWinUtils();
 
 	auto ntdll = GetModuleHandleA("ntdll");
 

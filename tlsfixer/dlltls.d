@@ -22,12 +22,6 @@ import tlsfixer.ntdll;
 import tlsfixer.winutils;
 
 
-T enforceErr(T)(T value, lazy const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__) nothrow
-{
-	if(!value) throw new Error(msg ? msg.idup : "Enforcement failed", file, line);
-	return value;
-}
-
 const(IMAGE_TLS_DIRECTORY)* getImageTlsDirectory(void* moduleBase) nothrow
 in { assert(!(cast(size_t) moduleBase & 0xFFFF)); }
 body
@@ -101,8 +95,6 @@ L:
 
 	leakedTlsIndex = TlsAlloc();
 	enforceErr(leakedTlsIndex != 0xFFFFFFFF /* TLS_OUT_OF_INDEXES */);
-
-	processHeap = enforceErr(GetProcessHeap());
 
 	initialized = true;
 }
@@ -387,27 +379,10 @@ body
 	tlsArray[tlsindex] = null;
 }
 
-
-__gshared HANDLE processHeap;
-
 void* allocateProcessHeapAsLoader(size_t size) nothrow
 {
 	// Adding 0xC0000 to the tag is obviously a flag also usesd by the nt-loader,
 	// could be the result of HEAP_MAKE_TAG_FLAGS(0, HEAP_NO_SERIALIZE | HEAP_GROWABLE)
 	// but this is not documented in the msdn entry for RtlAlloateHeap
 	return allocateProcessHeap(size, *Ntdll.pNtdllBaseTag | 0xC0000);
-}
-
-void* allocateProcessHeap(size_t size, uint flags = 0) nothrow
-in { assert(size); }
-body
-{
-	return enforceErr(Ntdll.RtlAllocateHeap(processHeap, flags, size));
-}
-
-void freeProcessHeap(void* heapBase) nothrow
-in { assert(heapBase); }
-body
-{
-	enforceErr(Ntdll.RtlFreeHeap(processHeap, 0, heapBase));
 }
