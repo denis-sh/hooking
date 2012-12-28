@@ -47,10 +47,10 @@ void initializeDllTlsModule() nothrow
 
 L:
 	foreach(ldrMod; loadedModules)
-    {
+	{
 		const id = getImageTlsDirectory(ldrMod.BaseAddress);
-        if(!id)
-            continue; // No TLS directory
+		if(!id)
+			continue; // No TLS directory
 
 		++modulesWithTls;
 		const tlsIndexPtr = cast(uint*) id.AddressOfIndex;
@@ -68,7 +68,7 @@ L:
 
 		const name = ldrMod.FullDllName;
 		curruptedModules ~= name.Buffer[0 .. name.Length / 2];
-    }
+	}
 
 	enforceErr(!curruptedModules, xformat(
 		"There are already loaded module%s with broken TLS:\n%( %(%c%)\n%)",
@@ -87,8 +87,8 @@ L:
 	*Ntdll.pLdrpNumberOfTlsEntries = tlsArrayLength;//1024^^2 * 10
 	useTlsIndex(maxTlsIndex);
 	foreach(ldrMod; loadedModules)
-    {
-        if(auto id = getImageTlsDirectory(ldrMod.BaseAddress))
+	{
+		if(auto id = getImageTlsDirectory(ldrMod.BaseAddress))
 			Ntdll.RtlSetBit(&tlsBitmap, *cast(uint*) id.AddressOfIndex);
 	}
 
@@ -116,51 +116,51 @@ L:
 */
 bool setDllTls(HINSTANCE hInstance, void* tlsstart, void* tlsend, void* tls_callbacks_a, int* tlsindex) nothrow
 {
-    /* If the OS has allocated a TLS slot for us, we don't have to do anything
+	/* If the OS has allocated a TLS slot for us, we don't have to do anything
 	* tls_index 0 means: the OS has not done anything, or it has allocated slot 0
 	* Vista and later Windows systems should do this correctly and not need
 	* this function.
 	*/
-    if(*tlsindex != 0)
-        return true;
+	if(*tlsindex != 0)
+		return true;
 
-    LDR_MODULE* ldrMod = null;
-    foreach(m; loadedModules) if(m.BaseAddress == hInstance)
+	LDR_MODULE* ldrMod = null;
+	foreach(m; loadedModules) if(m.BaseAddress == hInstance)
 	{ ldrMod = m; break; }
-    if(!ldrMod) return false; // not in module list, bail out
+	if(!ldrMod) return false; // not in module list, bail out
 
-    if(ldrMod.TlsIndex != 0)
-        return true;  // the OS has already setup TLS
+	if(ldrMod.TlsIndex != 0)
+		return true;  // the OS has already setup TLS
 
-    const tlsEntry = addTlsListEntry(tlsstart, tlsend, tls_callbacks_a, tlsindex);
-    if(!tlsEntry) return false;
+	const tlsEntry = addTlsListEntry(tlsstart, tlsend, tls_callbacks_a, tlsindex);
+	if(!tlsEntry) return false;
 
 	auto threadIds = getCurrentProcessThreadIds();
 	if(!threadIds)
-        return false;
+		return false;
 	foreach(threadId; threadIds)
 		if(!addTlsData(getTEB(threadId), tlsEntry.tlsstart, tlsEntry.tlsend, tlsEntry.tlsindex))
 			return free(threadIds.ptr), false;
 	free(threadIds.ptr);
 
-    ldrMod.TlsIndex = -1;  // flag TLS usage (not the index itself)
-    //ldrMod.LoadCount = -1; // prevent unloading of the DLL,
+	ldrMod.TlsIndex = -1;  // flag TLS usage (not the index itself)
+	//ldrMod.LoadCount = -1; // prevent unloading of the DLL,
 	// since XP does not keep track of used TLS entries
-    return true;
+	return true;
 }
 
 bool freeDllTls(HINSTANCE hInstance, int* tlsindex) nothrow
 {
 	LdrpTlsListEntry* tlsEntry = null;
-    foreach(e; tlsEntries) if(e.tlsindex == *tlsindex)
+	foreach(e; tlsEntries) if(e.tlsindex == *tlsindex)
 	{ tlsEntry = e; break; }
-    if(!tlsEntry) return false; // not in TLS entries list, bail out
+	if(!tlsEntry) return false; // not in TLS entries list, bail out
 
 	assert(tlsEntry.ptr_tlsindex == tlsindex);
 
 	auto threadIds = getCurrentProcessThreadIds();
 	if(!threadIds)
-        return false;
+		return false;
 	foreach(threadId; threadIds)
 		removeTlsData(getTEB(threadId), tlsEntry.tlsindex);
 	free(threadIds.ptr);
@@ -240,7 +240,7 @@ nothrow:
 {
 	const peb = getPEB();
 	auto ldrData = cast(PEB_LDR_DATA*) peb[3];
-    auto root = cast(LDR_MODULE*) &ldrData.InLoadOrderModuleList;
+	auto root = cast(LDR_MODULE*) &ldrData.InLoadOrderModuleList;
 	return ListEntryRange!LDR_MODULE(root);
 }
 
@@ -282,9 +282,9 @@ void useTlsIndex(size_t idx) nothrow
 const(LdrpTlsListEntry*) addTlsListEntry(
 	void* tlsstart, void* tlsend, void* tls_callbacks_a, int* tlsindex) nothrow
 {
-    // allocate new TlsList entry
-    auto entry = cast(LdrpTlsListEntry*) allocateProcessHeapAsLoader(LdrpTlsListEntry.sizeof);
-    if(!entry) return null;
+	// allocate new TlsList entry
+	auto entry = cast(LdrpTlsListEntry*) allocateProcessHeapAsLoader(LdrpTlsListEntry.sizeof);
+	if(!entry) return null;
 
 	*tlsindex = Ntdll.RtlFindClearBitsAndSet(&tlsBitmap, 1, 0);
 	if(*tlsindex == -1)
@@ -294,35 +294,35 @@ const(LdrpTlsListEntry*) addTlsListEntry(
 	} else
 		assert(numberOfTlsEntries < tlsBitmap.SizeOfBitMap);
 
-    // fill entry
-    entry.tlsstart = tlsstart;
-    entry.tlsend = tlsend;
-    entry.ptr_tlsindex = tlsindex;
-    entry.callbacks = tls_callbacks_a;
-    entry.zerofill = null;
-    entry.tlsindex = *tlsindex;
+	// fill entry
+	entry.tlsstart = tlsstart;
+	entry.tlsend = tlsend;
+	entry.ptr_tlsindex = tlsindex;
+	entry.callbacks = tls_callbacks_a;
+	entry.zerofill = null;
+	entry.tlsindex = *tlsindex;
 
-    // and add it to the end of TlsList
-    entry.next = Ntdll.pLdrpTlsList;
-    entry.prev = Ntdll.pLdrpTlsList.prev;
-    Ntdll.pLdrpTlsList.prev.next = entry;
-    Ntdll.pLdrpTlsList.prev = entry;
+	// and add it to the end of TlsList
+	entry.next = Ntdll.pLdrpTlsList;
+	entry.prev = Ntdll.pLdrpTlsList.prev;
+	Ntdll.pLdrpTlsList.prev.next = entry;
+	Ntdll.pLdrpTlsList.prev = entry;
 
 	++numberOfTlsEntries;
 
-    return entry;
+	return entry;
 }
 
 void removeTlsListEntry(LdrpTlsListEntry* entry) nothrow
 {
 	assert(Ntdll.RtlCheckBit(&tlsBitmap, entry.tlsindex) == 1);
-    Ntdll.RtlClearBit(&tlsBitmap, entry.tlsindex);
+	Ntdll.RtlClearBit(&tlsBitmap, entry.tlsindex);
 
 	// Remove it from the TlsList
-    entry.next.prev = entry.prev;
-    entry.prev.next = entry.next;
+	entry.next.prev = entry.prev;
+	entry.prev.next = entry.next;
 
-    --numberOfTlsEntries;
+	--numberOfTlsEntries;
 
 	// Free TlsList entry memory
 	// FIXME: what is is was allocated by an other person and not freed?
@@ -344,12 +344,12 @@ __gshared
 // Create a copy of the TLS data section and reallocate TLS array if needed
 bool addTlsData(void** teb, in void* tlsstart, in void* tlsend, in int tlsindex) nothrow
 {
-    immutable sz = tlsend - tlsstart;
-    void* tlsdata = cast(void*) allocateProcessHeapAsLoader(sz);
-    if(!tlsdata) return false;
+	immutable sz = tlsend - tlsstart;
+	void* tlsdata = cast(void*) allocateProcessHeapAsLoader(sz);
+	if(!tlsdata) return false;
 
-    // No relocations! not even self-relocations. Windows does not do them.
-    memcpy(tlsdata, tlsstart, sz);
+	// No relocations! not even self-relocations. Windows does not do them.
+	memcpy(tlsdata, tlsstart, sz);
 
 	auto tlsArray = cast(void**) teb[11];
 	assert(!(tlsindex && !tlsArray));
@@ -384,7 +384,7 @@ bool addTlsData(void** teb, in void* tlsstart, in void* tlsend, in int tlsindex)
 	}
 	assert(!tlsArray[tlsindex]);
 	tlsArray[tlsindex] = tlsdata;
-    return true;
+	return true;
 }
 
 void removeTlsData(void** teb, in int tlsindex) nothrow
