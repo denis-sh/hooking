@@ -13,7 +13,6 @@ module tlsfixer.dlltls;
 import core.stdc.stdlib: free;
 import core.stdc.string: memcpy, memset;
 import core.sys.windows.windows;
-import core.sys.windows.threadaux;
 import std.string: xformat;
 
 import unstd.math: roundUpToPowerOf2;
@@ -194,6 +193,24 @@ void** getPEB() nothrow
 {
 	asm { naked; mov EAX, FS:[0x30]; ret; }
 }
+
+
+// Get the thread environment block (TEB) of the thread with the given identifier
+void** getTEB(uint threadId) nothrow
+{
+	HANDLE handle = enforceErr(OpenThread(0x40 /* THREAD_QUERY_INFORMATION */, FALSE, threadId));
+
+	THREAD_BASIC_INFORMATION tbi;
+	ULONG returnLength;
+	NTSTATUS res = Ntdll.NtQueryInformationThread(handle, 0 /* THREADINFOCLASS.ThreadBasicInformation */, &tbi, tbi.sizeof, &returnLength);
+
+	enforceErr(CloseHandle(handle));
+
+	enforceErr(res >= 0);
+	assert(returnLength == tbi.sizeof);
+	return cast(void**) tbi.TebBaseAddress;
+}
+
 
 static struct ListEntryRange(T)
 {

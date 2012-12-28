@@ -13,11 +13,12 @@ module tlsfixer.ntdll;
 
 import core.sys.windows.windows;
 
-import hooking.windows.c.winternl: NTSTATUS, UNICODE_STRING, FuncNtQuerySystemInformation = NtQuerySystemInformation;
+public import hooking.windows.c.winternl;
 import hooking.x86.utils;
 
 
 extern(Windows) extern HANDLE GetProcessHeap() nothrow;
+extern(Windows) HANDLE OpenThread(DWORD dwDesiredAccess, BOOL bInheritHandle, DWORD dwThreadId) nothrow;
 
 struct Ntdll {
 static:
@@ -34,6 +35,9 @@ static:
 
 		alias NTSTATUS function(ULONG Flags, ULONG *State, ULONG *Cookie) FuncLdrLockLoaderLock;
 		alias NTSTATUS function(ULONG Flags, ULONG Cookie) FuncLdrUnlockLoaderLock;
+
+		alias .NtQuerySystemInformation FuncNtQuerySystemInformation;
+		alias .NtQueryInformationThread FuncNtQueryInformationThread;
 	}
 
 	// RtlCheckBit is used only in `assert`
@@ -74,6 +78,7 @@ static:
 		FuncLdrUnlockLoaderLock LdrUnlockLoaderLock;
 
 		FuncNtQuerySystemInformation NtQuerySystemInformation;
+		FuncNtQueryInformationThread NtQueryInformationThread;
 
 		int* pNtdllBaseTag;
 		
@@ -112,7 +117,8 @@ static:
 		   !loadFunc!LdrLockLoaderLock() ||
 		   !loadFunc!LdrUnlockLoaderLock() ||
 
-		   !loadFunc!NtQuerySystemInformation())
+		   !loadFunc!NtQuerySystemInformation() ||
+		   !loadFunc!NtQueryInformationThread())
 			return false;
 
 		void* pLdrInitializeThunk = GetProcAddress(hmodule, "LdrInitializeThunk");
