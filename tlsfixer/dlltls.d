@@ -272,7 +272,7 @@ const(LdrpTlsListEntry*) addTlsListEntry(
 	void* tlsstart, void* tlsend, void* tls_callbacks_a, int* tlsindex) nothrow
 {
     // allocate new TlsList entry
-    auto entry = cast(LdrpTlsListEntry*) allocateProcessHeap(LdrpTlsListEntry.sizeof);
+    auto entry = cast(LdrpTlsListEntry*) allocateProcessHeapAsLoader(LdrpTlsListEntry.sizeof);
     if(!entry) return null;
 
 	*tlsindex = Ntdll.RtlFindClearBitsAndSet(&tlsBitmap, 1, 0);
@@ -332,7 +332,7 @@ LeakedTls leakedTls;
 bool addTlsData(void** teb, in void* tlsstart, in void* tlsend, in int tlsindex) nothrow
 {
     immutable sz = tlsend - tlsstart;
-    void* tlsdata = cast(void*) allocateProcessHeap(sz);
+    void* tlsdata = cast(void*) allocateProcessHeapAsLoader(sz);
     if(!tlsdata) return false;
 
     // No relocations! not even self-relocations. Windows does not do them.
@@ -344,7 +344,7 @@ bool addTlsData(void** teb, in void* tlsstart, in void* tlsend, in int tlsindex)
 	{
 		// Create copy of TLS array
 		immutable newLength = roundUpToPowerOf2(tlsindex + 1);
-		void** newArray = cast(void**) allocateProcessHeap(newLength * (void*).sizeof);
+		void** newArray = cast(void**) allocateProcessHeapAsLoader(newLength * (void*).sizeof);
 		if(!newArray) return false;
 
 		if(tlsindex)
@@ -377,14 +377,19 @@ body
 
 __gshared HANDLE processHeap;
 
-void* allocateProcessHeap(size_t size) nothrow
-in { assert(size); }
-body
+void* allocateProcessHeapAsLoader(size_t size) nothrow
 {
 	// Adding 0xC0000 to the tag is obviously a flag also usesd by the nt-loader,
 	// could be the result of HEAP_MAKE_TAG_FLAGS(0, HEAP_NO_SERIALIZE | HEAP_GROWABLE)
 	// but this is not documented in the msdn entry for RtlAlloateHeap
-	return enforceErr(Ntdll.RtlAllocateHeap(processHeap, *Ntdll.pNtdllBaseTag | 0xC0000, size));
+	return allocateProcessHeap(size, *Ntdll.pNtdllBaseTag | 0xC0000);
+}
+
+void* allocateProcessHeap(size_t size, uint flags = 0) nothrow
+in { assert(size); }
+body
+{
+	return enforceErr(Ntdll.RtlAllocateHeap(processHeap, flags, size));
 }
 
 void freeProcessHeap(void* heapBase) nothrow
