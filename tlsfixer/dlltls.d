@@ -13,7 +13,7 @@ module tlsfixer.dlltls;
 import core.stdc.stdlib: free;
 import core.stdc.string: memcpy, memset;
 import core.sys.windows.windows;
-debug(dlltls) import core.stdc.stdio: fputs, fprintf, stderr;
+debug(dlltls) import core.stdc.stdio: fputs, fprintf;
 
 import unstd.math: roundUpToPowerOf2;
 

@@ -8,6 +8,7 @@ Authors: Denis Shelomovskij
 */
 module tlsfixer.winutils;
 
+import core.stdc.stdio: _iob;
 import core.sys.windows.windows;
 import core.stdc.stdlib: malloc, free;
 
@@ -16,13 +17,16 @@ import hooking.windows.c.winternl;
 import tlsfixer.ntdll;
 
 
+shared stderr = &_iob[2];
+
+
 T enforceErr(T)(T value, const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__) nothrow
 {
 	if(!value)
 	{
 		debug(tlsfixer)
 		{
-			import core.stdc.stdio: fprintf, stderr; 
+			import core.stdc.stdio: fprintf; 
 			fprintf(stderr, "Error@%s(%u): %s\n",
 				file.ptr, line, msg ? msg.ptr : "Enforcement failed");
 		}

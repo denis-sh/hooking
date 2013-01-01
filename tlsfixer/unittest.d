@@ -15,6 +15,9 @@ enum dllRoot = `tlsfixer\test-dlls\`;
 shared bool tlsLoaded = false;
 shared int currTLSIndex = 0;
 
+debug enum tlsFixerHasTLS = true;
+else enum tlsFixerHasTLS = false;
+
 void testLibrary(HANDLE h, size_t testIndex = 0)
 {
 	auto call(T = GetIntFunc)(string name)
@@ -25,7 +28,7 @@ void testLibrary(HANDLE h, size_t testIndex = 0)
 	immutable int tlsIndex = call("getTLSIndex");
 
 	assert(tlsLoaded == !!tlsIndex);
-	enforce(tlsIndex == currTLSIndex + tlsLoaded);
+	enforce(tlsIndex == currTLSIndex + tlsFixerHasTLS * tlsLoaded);
 
 
 	immutable int tlsVarDesiredValue = call("getTLSVarDesiredValue");

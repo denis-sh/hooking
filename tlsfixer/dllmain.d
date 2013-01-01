@@ -9,7 +9,7 @@ Authors: Denis Shelomovskij
 module tlsfixer.dllmain;
 
 import core.sys.windows.windows;
-import core.sys.windows.dll;
+debug import core.sys.windows.dll;
 
 import tlsfixer.tlsfixes;
 
@@ -19,7 +19,7 @@ extern(Windows) BOOL DllMain(HINSTANCE hInstance, ULONG ulReason, LPVOID pvReser
 	final switch (ulReason)
 	{
 	case DLL_PROCESS_ATTACH:
-		dll_process_attach(hInstance, true);
+		debug dll_process_attach(hInstance, true);
 		fixLibraryLoading();
 		break;
 
