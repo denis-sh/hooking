@@ -33,9 +33,6 @@ static:
 		alias PVOID function (PVOID Base, BOOLEAN MappedAsImage, USHORT DirectoryEntry, PULONG Size)
 			FuncRtlImageDirectoryEntryToData;
 
-		alias NTSTATUS function(ULONG Flags, ULONG *State, ULONG *Cookie) FuncLdrLockLoaderLock;
-		alias NTSTATUS function(ULONG Flags, ULONG Cookie) FuncLdrUnlockLoaderLock;
-
 		alias .NtQuerySystemInformation FuncNtQuerySystemInformation;
 		alias .NtQueryInformationThread FuncNtQueryInformationThread;
 	}
@@ -74,9 +71,6 @@ static:
 
 		FuncRtlImageDirectoryEntryToData  RtlImageDirectoryEntryToData;
 
-		FuncLdrLockLoaderLock LdrLockLoaderLock;
-		FuncLdrUnlockLoaderLock LdrUnlockLoaderLock;
-
 		FuncNtQuerySystemInformation NtQuerySystemInformation;
 		FuncNtQueryInformationThread NtQueryInformationThread;
 
@@ -113,9 +107,6 @@ static:
 		   !loadFunc!RtlFindClearBitsAndSet() ||
 
 		   !loadFunc!RtlImageDirectoryEntryToData() ||
-
-		   !loadFunc!LdrLockLoaderLock() ||
-		   !loadFunc!LdrUnlockLoaderLock() ||
 
 		   !loadFunc!NtQuerySystemInformation() ||
 		   !loadFunc!NtQueryInformationThread())

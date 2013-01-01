@@ -34,11 +34,6 @@ void fixLibraryLoading() {
 	enforceErr(Ntdll.load());
 	initWinUtils();
 
-	ULONG cookie;
-	Ntdll.LdrLockLoaderLock(1, null, &cookie);
-	scope(exit) Ntdll.LdrUnlockLoaderLock(1, cookie);
-	if(libraryLoadingFixed) return;
-
 	initializeDllTlsModule();
 
 	void* dllMainCallAddress;
