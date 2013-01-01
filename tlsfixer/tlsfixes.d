@@ -34,8 +34,6 @@ void fixLibraryLoading() {
 	enforceErr(Ntdll.load());
 	initWinUtils();
 
-	auto ntdll = GetModuleHandleA("ntdll");
-
 	ULONG cookie;
 	Ntdll.LdrLockLoaderLock(1, null, &cookie);
 	scope(exit) Ntdll.LdrUnlockLoaderLock(1, cookie);
@@ -45,7 +43,7 @@ void fixLibraryLoading() {
 
 	void* dllMainCallAddress;
 	{
-		void* pLdrLoadDll = enforceErr(GetProcAddress(ntdll, "LdrLoadDll"));
+		void* pLdrLoadDll = enforceErr(GetProcAddress(Ntdll.hmodule, "LdrLoadDll"));
 
 		void* pFunc1 = enforceErr(findCodeReference(pLdrLoadDll,
 			0x120, x"FFB5 C0FDFFFF  E8 ",  // ... call __Func1;
@@ -89,7 +87,7 @@ void fixLibraryLoading() {
 
 	void* inLdrpFreeTls;
 	{
-		void* pLdrShutdownThread = enforceErr(GetProcAddress(ntdll, "LdrShutdownThread"));
+		void* pLdrShutdownThread = enforceErr(GetProcAddress(Ntdll.hmodule, "LdrShutdownThread"));
 
 		void* pLabel1 = enforceErr(findCodeReference(pLdrShutdownThread,
 			0x40, x"8B58 20  895D E4  EB ",  // ... jmp short __Label1;
