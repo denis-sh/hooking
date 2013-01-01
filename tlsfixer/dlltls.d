@@ -13,7 +13,7 @@ module tlsfixer.dlltls;
 import core.stdc.stdlib: free;
 import core.stdc.string: memcpy, memset;
 import core.sys.windows.windows;
-import std.string: xformat;
+debug(dlltls) import core.stdc.stdio: fputs, fprintf, stderr;
 
 import unstd.math: roundUpToPowerOf2;
 
@@ -43,7 +43,7 @@ void initializeDllTlsModule() nothrow
 
 	size_t maxTlsIndex = 0, modulesWithTls = 0;
 
-	const(wchar)[][] curruptedModules = null; // Loaded modules with broken TLS
+	size_t curruptedModulesCount = 0; // Loaded modules with broken TLS count
 
 L:
 	foreach(ldrMod; loadedModules)
@@ -67,17 +67,29 @@ L:
 				continue L; // The module is in LdrpTlsList
 
 		const name = ldrMod.FullDllName;
-		curruptedModules ~= name.Buffer[0 .. name.Length / 2];
+		debug(dlltls)
+		{
+			if(!curruptedModulesCount)
+				fputs("There are already loaded modules with broken TLS:\n", stderr);
+			import core.stdc.wchar_: fwprintf;
+			fwprintf(stderr, " %.*s\n", name.Length / 2, name.Buffer);
+		}
+		++curruptedModulesCount;
 	}
 
-	enforceErr(!curruptedModules, xformat(
-		"There are already loaded module%s with broken TLS:\n%( %(%c%)\n%)",
-		curruptedModules.length == 1 ? "" : "s", curruptedModules));
+	enforceErr(!curruptedModulesCount, "There are already loaded modules with broken TLS");
 
 	numberOfTlsEntries = *Ntdll.pLdrpNumberOfTlsEntries;
-	enforceErr(modulesWithTls == numberOfTlsEntries, xformat(
-		"Loaded module with TLS count = %s != %s = LdrpNumberOfTlsEntries",
-		modulesWithTls, numberOfTlsEntries));
+	debug(dlltls)
+	{
+		if(modulesWithTls != numberOfTlsEntries)
+			fprintf(stderr,
+				"Loaded module with TLS count = %zu != %zu = LdrpNumberOfTlsEntries\n",
+				modulesWithTls, numberOfTlsEntries);
+	}
+
+	enforceErr(modulesWithTls == numberOfTlsEntries,
+		"Loaded module with TLS count != LdrpNumberOfTlsEntries");
 
 	enforceErr(maxTlsIndex + 1 == numberOfTlsEntries, "maxTlsIndex + 1 != numberOfTlsEntries");
 
