@@ -16,9 +16,18 @@ import hooking.windows.c.winternl;
 import tlsfixer.ntdll;
 
 
-T enforceErr(T)(T value, lazy const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__) nothrow
+T enforceErr(T)(T value, const(char)[] msg = null, string file = __FILE__, size_t line = __LINE__) nothrow
 {
-	if(!value) throw new Error(msg ? msg.idup : "Enforcement failed", file, line);
+	if(!value)
+	{
+		debug(tlsfixer)
+		{
+			import core.stdc.stdio: fprintf, stderr; 
+			fprintf(stderr, "Error@%s(%u): %s\n",
+				file.ptr, line, msg ? msg.ptr : "Enforcement failed");
+		}
+		assert(0);
+	}
 	return value;
 }
 
