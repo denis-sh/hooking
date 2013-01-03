@@ -2,7 +2,9 @@
 #include <windows.h>
 
 
-const int tlsVarDesiredValue = 1009;
+const int tlsVarDesiredValue = 
+#include "tlsVarDesiredValue"
+;
 
 extern "C" extern int _tls_index;
 __declspec(thread) int tlsVar = tlsVarDesiredValue;

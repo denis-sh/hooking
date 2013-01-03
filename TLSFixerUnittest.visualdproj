@@ -187,7 +187,7 @@
  <Folder name="TLSFixerUnittest">
   <Folder name="tlsfixer">
    <Folder name="test-dlls">
-    <File tool="Custom" path="tlsfixer\test-dlls\dllmain.cpp" customcmd="tlsfixer\test-dlls\build-C-dlls.bat" outfile="tlsfixer\test-dlls\test-C.dll" />
+    <File tool="Custom" path="tlsfixer\test-dlls\dllmain.cpp" customcmd="tlsfixer\test-dlls\build-C-dlls.bat" outfile="tlsfixer\test-dlls\test-C-1.dll" />
     <File tool="Custom" path="tlsfixer\test-dlls\dllmain.d" customcmd="tlsfixer\test-dlls\build-D-dlls.bat" outfile="tlsfixer\test-dlls\test-D-1.dll" />
    </Folder>
    <File path="tlsfixer\unittest.d" />

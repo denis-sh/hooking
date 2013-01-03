@@ -58,7 +58,7 @@ void main()
 	enforce(cast(ubyte) GetVersion() < 6, "TLS problem is fixed in Windwos Vista and later, this test has no sense");
 
 	// Unfixed: tlsLoaded = false, currTLSIndex = 0
-	HANDLE testC = loadAndTest("test-C");
+	HANDLE testC = loadAndTest("test-C-1");
 	HANDLE testD1 = loadAndTest("test-D-1");
 	FreeLibrary(testC);
 	testLibrary(testD1);
@@ -70,7 +70,7 @@ void main()
 	tlsLoaded = true;
 	
 	currTLSIndex = 1;
-	testC = loadAndTest("test-C");
+	testC = loadAndTest("test-C-1");
 	currTLSIndex = 2;
 	testD1 = loadAndTest("test-D-1");
 	FreeLibrary(testC);
@@ -80,7 +80,7 @@ void main()
 	currTLSIndex = 1;
 	testD1 = loadAndTest("test-D-1");
 	currTLSIndex = 2;
-	testC = loadAndTest("test-C");
+	testC = loadAndTest("test-C-1");
 	currTLSIndex = 3;
 	HANDLE testD2 = loadAndTest("test-D-2");
 	currTLSIndex = 4;

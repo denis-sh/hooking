@@ -18,12 +18,24 @@ rem /c Compiles without linking.
 rem /Zi Generates complete debugging information.
 rem /TP Specifies a C++ source file.
 
+set CL_ARGS=/O2 /Oi /GL /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_USRDLL" /D "TESTCDLLS_EXPORTS" /D "_WINDLL" /D "_UNICODE" /D "UNICODE" /EHsc /MT /Gy /W3 /c /Zi /TP
 
-cl /O2 /Oi /GL /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_USRDLL" /D "TESTCDLLS_EXPORTS" /D "_WINDLL" /D "_UNICODE" /D "UNICODE" /EHsc /MT /Gy /W3 /c /Zi /TP dllmain.cpp /nologo /errorReport:prompt || echo Error && pause
+set LINK_ARGS=/INCREMENTAL:NO /DLL /DEBUG /SUBSYSTEM:WINDOWS /OPT:REF /OPT:ICF /LTCG /DYNAMICBASE /NXCOMPAT /MACHINE:X86
+
+for /l %%i in (1,1,3) do (
+    echo 101%%i > tlsVarDesiredValue
+    cl %CL_ARGS% dllmain.cpp /nologo /errorReport:prompt || goto reportError
+
+    link /OUT:test-C-%%i.dll %LINK_ARGS% kernel32.lib dllmain.obj /NOLOGO /ERRORREPORT:PROMPT || goto reportError
+
+    if exist test-C-%%i-COFF.lib del test-C-%%i-COFF.lib
+    rename test-C.lib test-C-%%i-COFF.lib
+)
+
+del *.obj && del *.exp && del *.pdb && del tlsVarDesiredValue
 
 
-link /OUT:test-C.dll /INCREMENTAL:NO /DLL /DEBUG /SUBSYSTEM:WINDOWS /OPT:REF /OPT:ICF /LTCG /DYNAMICBASE /NXCOMPAT /MACHINE:X86 kernel32.lib dllmain.obj /NOLOGO /ERRORREPORT:PROMPT || echo Error && pause
-
-del *.obj && del *.exp && del *.pdb
-if exist test-C-COFF.lib del test-C-COFF.lib
-rename test-C.lib test-C-COFF.lib
+goto noError
+:reportError
+echo Building C DLLs failed!
+:noError
