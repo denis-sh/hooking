@@ -182,13 +182,15 @@ bool freeDllTls(HINSTANCE hInstance, int* tlsindex) nothrow
 	return true;
 }
 
-void onLdrShutdownThread() nothrow {
+void onLdrShutdownThread() nothrow
+{
 	auto leakedTls = cast(LeakedTls*) TlsGetValue(leakedTlsIndex);
 	enforceErr(GetLastError() == ERROR_SUCCESS); // TlsGetValue always call SetLastError
 	if(!leakedTls)
 		return;
 
-	foreach(ref array; leakedTls.arrays[0 .. leakedTls.arraysCount]) {
+	foreach(ref array; leakedTls.arrays[0 .. leakedTls.arraysCount])
+	{
 		freeProcessHeap(array.ptr);
 		leakedTls.bytes -= array.length;
 		totalLeakedBytes -= array.length;
@@ -262,7 +264,8 @@ nothrow:
 	return ListEntryRange!LdrpTlsListEntry(Ntdll.pLdrpTlsList);
 }
 
-__gshared {
+__gshared
+{
 	RTL_BITMAP tlsBitmap;
 	size_t numberOfTlsEntries, tlsArrayLength;
 }

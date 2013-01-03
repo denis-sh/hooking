@@ -25,7 +25,8 @@ enables you to declare thread-local variables: _declspec(thread). If you use thi
 syntax in a DLL, you will not be able to load the DLL explicitly using LoadLibrary
 on versions of Windows prior to Windows Vista.
 */
-void fixLibraryLoading() {
+void fixLibraryLoading()
+{
 	if(cast(ubyte) GetVersion() >= 6) // Windows Vista or later
 		return;
 	if(libraryLoadingFixed)
@@ -117,8 +118,10 @@ private:
 
 shared bool libraryLoadingFixed = false;
 
-void nakedDllMainCaller() nothrow {
-	asm {
+void nakedDllMainCaller() nothrow
+{
+	asm
+	{
 		naked;
 		push dword ptr [EBP+8];
 		call dllMainCaller;
@@ -129,7 +132,8 @@ void nakedDllMainCaller() nothrow {
 
 void nakedOnLdrShutdownThread() nothrow
 {
-	asm {
+	asm
+	{
 		naked;
 		push EAX;
 		call windowsOnLdrShutdownThread;
@@ -140,7 +144,8 @@ void nakedOnLdrShutdownThread() nothrow
 	}
 }
 
-extern (Windows) {
+extern (Windows)
+{
 	alias BOOL function(HINSTANCE hInstance, ULONG ulReason, LPVOID pvReserved) DllMainType;
 
 	BOOL dllMainCaller(DllMainType dllMain, HINSTANCE hInstance, ULONG ulReason, LPVOID pvReserved)
@@ -160,13 +165,17 @@ extern (Windows) {
 // (with DisableThreadLibraryCalls)
 void beforeDllMainCalled(HINSTANCE hinstDLL, DWORD reason, LPVOID reserved) nothrow
 in { assert(reason < 4, "Unexpected reason"); }
-body {
-	debug(tlsfixes) {
+body
+{
+	debug(tlsfixes)
+	{
 		char[MAX_PATH + 1] s;
 		enforceErr(GetModuleFileNameA(hinstDLL, s.ptr, s.length));
 		const debug_itd = getImageTlsDirectory(hinstDLL);
-		if(debug_itd) {
-			final switch(reason) {
+		if(debug_itd)
+		{
+			final switch(reason)
+			{
 				case 1: printf("DLL_PROCESS_ATTACH (loaded %s)",
 							reserved is null ? "dynamically".ptr : "statically".ptr);
 					break;
@@ -190,7 +199,8 @@ body {
 
 	/*enum n = 1024 * 1024 * 100;
 	__gshared void* p;
-	if(!p) {
+	if(!p)
+	{
 		p = core.stdc.stdlib.malloc(n);
 		(cast(uint[])p[0..n])[] = 7;
 	}*/
@@ -203,7 +213,8 @@ body {
 	assert(done);
 }
 
-void afterDllMainCalled(HINSTANCE hinstDLL, DWORD reason, LPVOID reserved) nothrow  {
+void afterDllMainCalled(HINSTANCE hinstDLL, DWORD reason, LPVOID reserved) nothrow
+{
 	if(reason != 0)
 		return; // Not DLL_PROCESS_DETACH
 

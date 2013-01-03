@@ -20,7 +20,8 @@ import hooking.x86.utils;
 extern(Windows) extern HANDLE GetProcessHeap() nothrow;
 extern(Windows) HANDLE OpenThread(DWORD dwDesiredAccess, BOOL bInheritHandle, DWORD dwThreadId) nothrow;
 
-struct Ntdll {
+struct Ntdll
+{
 static:
 	extern(Windows) nothrow
 	{
@@ -60,7 +61,8 @@ static:
 	}
 
 
-	__gshared {
+	__gshared
+	{
 		HMODULE hmodule;
 
 		FuncRtlAllocateHeap  RtlAllocateHeap;
@@ -95,7 +97,8 @@ static:
 		if(!hmodule)
 			return false;
 
-		bool loadFunc(alias func)() {
+		bool loadFunc(alias func)()
+		{
 			func = cast(typeof(func)) GetProcAddress(hmodule, func.stringof.ptr);
 			return !!func;
 		}
@@ -217,7 +220,8 @@ struct PEB_LDR_DATA
 	LIST_ENTRY      InInitializationOrderModuleList;
 }
 
-struct IMAGE_TLS_DIRECTORY32 {
+struct IMAGE_TLS_DIRECTORY32
+{
 	DWORD   StartAddressOfRawData;
 	DWORD   EndAddressOfRawData;
 	DWORD   AddressOfIndex;             // PDWORD
