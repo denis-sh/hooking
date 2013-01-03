@@ -204,13 +204,13 @@ body
 		p = core.stdc.stdlib.malloc(n);
 		(cast(uint[])p[0..n])[] = 7;
 	}*/
-	bool done = setDllTls(hinstDLL,
+	enforceErr(setDllTls(hinstDLL,
 		//p,p+n,
 		cast(void*) itd.StartAddressOfRawData,
 		cast(void*) itd.EndAddressOfRawData,
 		cast(void*) itd.AddressOfCallBacks,
-		cast( int*) itd.AddressOfIndex);
-	assert(done);
+		cast( int*) itd.AddressOfIndex),
+		"Can't set DLL TLS");
 }
 
 void afterDllMainCalled(HINSTANCE hinstDLL, DWORD reason, LPVOID reserved) nothrow
@@ -223,8 +223,7 @@ void afterDllMainCalled(HINSTANCE hinstDLL, DWORD reason, LPVOID reserved) nothr
 		return; // No implicit TLS
 	debug(tlsfixes) puts("Freeing TLS...");
 
-	bool done = freeDllTls(hinstDLL, cast(int*) itd.AddressOfIndex);
-	assert(done);
+	enforceErr(freeDllTls(hinstDLL, cast(int*) itd.AddressOfIndex), "Can't free DLL TLS");
 }
 
 void insertJump(void* originAddress, in char[] originCode, const(void)* target)
