@@ -356,7 +356,7 @@ bool addTlsData(void** teb, in void* tlsstart, in void* tlsend, in int tlsindex)
 	void* tlsdata = cast(void*) allocateProcessHeapAsLoader(sz);
 	if(!tlsdata) return false;
 
-	// No relocations! not even self-relocations. Windows does not do them.
+	// No relocations! Not even self-relocations. Windows does not do them.
 	memcpy(tlsdata, tlsstart, sz);
 
 	auto tlsArray = cast(void**) teb[11];
