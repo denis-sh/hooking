@@ -13,53 +13,62 @@ enum dllRoot = `tlsfixer\test-dlls\`;
 
 
 shared bool tlsLoaded = false;
-shared int currTLSIndex = 0;
 
 debug enum tlsFixerHasTLS = true;
 else enum tlsFixerHasTLS = false;
 
-void testLibrary(HMODULE h, size_t testIndex = 0)
+struct TLSDLL
 {
-	auto call(T = GetIntFunc)(string name)
+	HMODULE h;
+	int tlsIndex;
+
+	void test(size_t testIndex = 0)
 	{
-		return enforce(cast(T) GetProcAddress(h, toStringz(name)), "Can't find `" ~ name ~ "`")();
+		auto call(T = GetIntFunc)(string name)
+		{
+			return enforce(cast(T) GetProcAddress(h, toStringz(name)), "Can't find `" ~ name ~ "`")();
+		}
+
+		immutable int tlsIndex = call("getTLSIndex");
+
+		assert(tlsLoaded == !!tlsIndex);
+		enforce(tlsIndex == this.tlsIndex + tlsFixerHasTLS * tlsLoaded, "Incorrect TLS index");
+
+
+		immutable int tlsVarDesiredValue = call("getTLSVarDesiredValue");
+		enforce(tlsVarDesiredValue / 100 == 10, "Unexpected TLS variable desired value");
+
+		if(tlsLoaded)
+		{
+			immutable int tlsVarValue = call("getTLSVarValue");
+			enforce(tlsVarValue == tlsVarDesiredValue + testIndex, "Incorrect TLS variable value");
+			call!VoidFunc("incrementTLSVar");
+			enforce(tlsVarDesiredValue == call("getTLSVarDesiredValue"), "TLS variable desired value changed after increment");
+			enforce(tlsVarValue + 1 == call("getTLSVarValue"), "Incorrect TLS variable value after increment");
+		}
 	}
 
-	immutable int tlsIndex = call("getTLSIndex");
 
-	assert(tlsLoaded == !!tlsIndex);
-	enforce(tlsIndex == currTLSIndex + tlsFixerHasTLS * tlsLoaded, "Incorrect TLS index");
+	@disable this();
 
-
-	immutable int tlsVarDesiredValue = call("getTLSVarDesiredValue");
-	enforce(tlsVarDesiredValue / 100 == 10, "Unexpected TLS variable desired value");
-
-	if(tlsLoaded)
+	this(int tlsIndex, in char[] name)
 	{
-		immutable int tlsVarValue = call("getTLSVarValue");
-		enforce(tlsVarValue == tlsVarDesiredValue + testIndex, "Incorrect TLS variable value");
-		call!VoidFunc("incrementTLSVar");
-		enforce(tlsVarDesiredValue == call("getTLSVarDesiredValue"), "TLS variable desired value changed after increment");
-		enforce(tlsVarValue + 1 == call("getTLSVarValue"), "Incorrect TLS variable value after increment");
+		this.tlsIndex = tlsIndex;
+		const pathW = toUTF16z(dllRoot ~ name ~ ".dll");
+		enforce(!GetModuleHandleW(pathW), format("'%s' is already loaded", name));
+		h = enforce(LoadLibraryW(pathW), format("Failed to load '%s'", name));
+		test(0);
 	}
-}
 
-
-HMODULE loadAndTest(in char[] name)
-{
-	const pathW = toUTF16z(dllRoot ~ name ~ ".dll");
-	enforce(!GetModuleHandleW(pathW), format("'%s' is already loaded", name));
-	HMODULE h = enforce(LoadLibraryW(pathW), format("Failed to load '%s'", name));
-	testLibrary(h, 0);
-	return h;
-}
-
-void unload(HMODULE h)
-{
-	char ch;
-	enforce(GetModuleFileNameA(h, &ch, 1) == 1, "DLL is not loaded");
-	enforce(FreeLibrary(h), "Failed to unload DLL");
-	enforce(!GetModuleFileNameA(h, &ch, 1), "DLL is still loaded");
+	void unload(size_t testIndex = 1)
+	{
+		test(testIndex);
+		char ch;
+		enforce(GetModuleFileNameA(h, &ch, 1) == 1, "DLL is not loaded");
+		enforce(FreeLibrary(h), "Failed to unload DLL");
+		enforce(!GetModuleFileNameA(h, &ch, 1), "DLL is still loaded");
+		h = null;
+	}
 }
 
 
@@ -68,77 +77,49 @@ void main()
 	enforce(cast(ubyte) GetVersion() < 6, "TLS problem is fixed in Windwos Vista and later, this test has no sense");
 
 	// Unfixed: tlsLoaded = false, currTLSIndex = 0
-	HMODULE testC = loadAndTest("test-C-1");
-	HMODULE testD1 = loadAndTest("test-D-1");
-	unload(testC);
-	testLibrary(testD1);
-	unload(testD1);
+	auto testC = TLSDLL(0, "test-C-1");
+	auto testD1 = TLSDLL(0, "test-D-1");
+	testC.unload();
+	testD1.unload();
 
 
 	// Fixed
 	enforce(LoadLibraryA("TLSFixerDLL"));
 	tlsLoaded = true;
 
-	currTLSIndex = 1;
-	testC = loadAndTest("test-C-1");
-	currTLSIndex = 2;
-	testD1 = loadAndTest("test-D-1");
-	unload(testC);
-	testLibrary(testD1, 1);
-	unload(testD1);
+	testC = TLSDLL(1, "test-C-1");
+	testD1 = TLSDLL(2, "test-D-1");
+	testC.unload();
+	testD1.unload();
 
-	currTLSIndex = 1;
-	testD1 = loadAndTest("test-D-1");
-	currTLSIndex = 2;
-	testC = loadAndTest("test-C-1");
-	currTLSIndex = 3;
-	HMODULE testD2 = loadAndTest("test-D-2");
-	currTLSIndex = 4;
-	HMODULE testD3 = loadAndTest("test-D-3");
-	__gshared HMODULE testC3;
+	testD1 = TLSDLL(1, "test-D-1");
+	testC = TLSDLL(2, "test-C-1");
+	auto testD2 = TLSDLL(3, "test-D-2");
+	auto testD3 = TLSDLL(4, "test-D-3");
 
+	__gshared TLSDLL testC3 = void;
 
 	auto t = new Thread(
 	{
-		currTLSIndex = 2;
-		testLibrary(testC);
-		currTLSIndex = 1;
-		testLibrary(testD1);
-		testLibrary(testD1, 1);
-		currTLSIndex = 2;
-		testLibrary(testC, 1);
-		currTLSIndex = 3;
-		testLibrary(testD2);
-		currTLSIndex = 4;
-		testLibrary(testD3);
+		testC.test();
+		testD1.test();
+		testD1.test(1);
+		testC.test(1);
+		testD2.test();
+		testD3.test();
 
-		currTLSIndex = 5;
-		HMODULE testC2 = loadAndTest("test-C-2");
-		currTLSIndex = 6;
-		testC3 = loadAndTest("test-C-3");
-		currTLSIndex = 5;
-		testLibrary(testC2, 1);
-		unload(testC2);
-		currTLSIndex = 6;
-		testLibrary(testC3, 1);
+		auto testC2 = TLSDLL(5, "test-C-2");
+		testC3 = TLSDLL(6, "test-C-3");
+		testC2.unload();
+		testC3.test(1);
 	});
 	t.start();
 	t.join();
 
-	currTLSIndex = 6;
-	testLibrary(testC3);
-	unload(testC3);
+	testC3.unload(0);
 
-	currTLSIndex = 1;
-	testLibrary(testD1, 1);
-	unload(testD1);
-	currTLSIndex = 2;
-	testLibrary(testC, 1);
-	unload(testC);
-	currTLSIndex = 3;
-	testLibrary(testD2, 1);
-	unload(testD2);
-	currTLSIndex = 4;
-	testLibrary(testD3, 1);
-	unload(testD3);
+	testD1.unload();
+	testC.unload();
+	testD2.unload();
+	testD3.unload();
 }
