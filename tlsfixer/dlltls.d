@@ -13,7 +13,7 @@ module tlsfixer.dlltls;
 import core.stdc.stdlib: free;
 import core.stdc.string: memcpy, memset;
 import core.sys.windows.windows;
-debug(dlltls) import core.stdc.stdio: fputs, fprintf;
+debug(dlltls) import core.stdc.stdio: fputs, fprintf, puts, printf;
 
 import unstd.math: roundUpToPowerOf2;
 
@@ -144,6 +144,7 @@ bool setDllTls(HINSTANCE hInstance, void* tlsstart, void* tlsend, void* tls_call
 	auto threadIds = getCurrentProcessThreadIds();
 	if(!threadIds)
 		return false;
+	debug(dlltls) printf("Setting TLS to %zu thread(s)\n", threadIds.length);
 	foreach(threadId; threadIds)
 		if(!addTlsData(getTEB(threadId), tlsEntry.tlsstart, tlsEntry.tlsend, tlsEntry.tlsindex))
 			return free(threadIds.ptr), false;
@@ -166,6 +167,7 @@ bool freeDllTls(HINSTANCE hInstance, int* tlsindex) nothrow
 	auto threadIds = getCurrentProcessThreadIds();
 	if(!threadIds)
 		return false;
+	debug(dlltls) printf("Freeing TLS from %zu thread(s)\n", threadIds.length);
 	foreach(threadId; threadIds)
 		removeTlsData(getTEB(threadId), tlsEntry.tlsindex);
 	free(threadIds.ptr);
@@ -177,18 +179,22 @@ bool freeDllTls(HINSTANCE hInstance, int* tlsindex) nothrow
 
 void onLdrShutdownThread() nothrow
 {
+	debug(dlltls) puts("On LdrShutdownThread");
 	auto leakedTls = cast(LeakedTls*) TlsGetValue(leakedTlsIndex);
 	enforceErr(GetLastError() == ERROR_SUCCESS); // TlsGetValue always call SetLastError
 	if(!leakedTls)
 		return;
 
+	debug(dlltls) printf("Freeing %zu leaked TLS arrays (%zu elements:", leakedTls.arraysCount, leakedTls.bytes / (void*).sizeof);
 	foreach(ref array; leakedTls.arrays[0 .. leakedTls.arraysCount])
 	{
+		debug(dlltls) printf(" %zu", array.length);
 		freeProcessHeap(array.ptr);
 		leakedTls.bytes -= array.length;
 		totalLeakedBytes -= array.length;
 		array = null;
 	}
+	debug(dlltls) puts(")");
 	assert(!leakedTls.bytes);
 	freeProcessHeap(leakedTls);
 	debug enforceErr(TlsSetValue(leakedTlsIndex, cast(void*) -1));
@@ -363,7 +369,8 @@ bool addTlsData(void** teb, in void* tlsstart, in void* tlsend, in int tlsindex)
 	if(tlsindex >= tlsArrayLength)
 	{
 		// Create copy of TLS array
-		immutable newLength = roundUpToPowerOf2(tlsindex + 1);
+		immutable uint newLength = roundUpToPowerOf2(tlsindex + 1);
+		debug(dlltls) printf("Allocating new TLS array of %u elements\n", newLength);
 		void** newArray = cast(void**) allocateProcessHeapAsLoader(newLength * (void*).sizeof);
 		if(!newArray) return false;
 
