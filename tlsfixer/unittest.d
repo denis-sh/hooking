@@ -95,6 +95,7 @@ void main()
 	HMODULE testD2 = loadAndTest("test-D-2");
 	currTLSIndex = 4;
 	HMODULE testD3 = loadAndTest("test-D-3");
+	__gshared HMODULE testC3;
 
 
 	auto t = new Thread(
@@ -110,9 +111,23 @@ void main()
 		testLibrary(testD2);
 		currTLSIndex = 4;
 		testLibrary(testD3);
+
+		currTLSIndex = 5;
+		HMODULE testC2 = loadAndTest("test-C-2");
+		currTLSIndex = 6;
+		testC3 = loadAndTest("test-C-3");
+		currTLSIndex = 5;
+		testLibrary(testC2, 1);
+		unload(testC2);
+		currTLSIndex = 6;
+		testLibrary(testC3, 1);
 	});
 	t.start();
 	t.join();
+
+	currTLSIndex = 6;
+	testLibrary(testC3);
+	unload(testC3);
 
 	currTLSIndex = 1;
 	testLibrary(testD1, 1);
