@@ -127,13 +127,8 @@ L:
 */
 bool setDllTls(HINSTANCE hInstance, void* tlsstart, void* tlsend, void* tls_callbacks_a, int* tlsindex) nothrow
 {
-	/* If the OS has allocated a TLS slot for us, we don't have to do anything
-	* tls_index 0 means: the OS has not done anything, or it has allocated slot 0
-	* Vista and later Windows systems should do this correctly and not need
-	* this function.
-	*/
 	if(*tlsindex != 0)
-		return true;
+		return false; // the OS has already setup TLS, bail out
 
 	LDR_MODULE* ldrMod = null;
 	foreach(m; loadedModules) if(m.BaseAddress == hInstance)
@@ -141,7 +136,7 @@ bool setDllTls(HINSTANCE hInstance, void* tlsstart, void* tlsend, void* tls_call
 	if(!ldrMod) return false; // not in module list, bail out
 
 	if(ldrMod.TlsIndex != 0)
-		return true;  // the OS has already setup TLS
+		return false; // the OS has already setup TLS, bail out
 
 	const tlsEntry = addTlsListEntry(tlsstart, tlsend, tls_callbacks_a, tlsindex);
 	if(!tlsEntry) return false;
