@@ -202,15 +202,7 @@ body
 		return; // No implicit TLS
 	debug(tlsfixes) puts("Setting TLS...");
 
-	/*enum n = 1024 * 1024 * 100;
-	__gshared void* p;
-	if(!p)
-	{
-		p = core.stdc.stdlib.malloc(n);
-		(cast(uint[])p[0..n])[] = 7;
-	}*/
 	enforceErr(setDllTls(hinstDLL,
-		//p,p+n,
 		cast(void*) itd.StartAddressOfRawData,
 		cast(void*) itd.EndAddressOfRawData,
 		cast(void*) itd.AddressOfCallBacks,
