@@ -109,21 +109,21 @@ L:
 	initialized = true;
 }
 
-/* *****************************************************
-* Fix implicit thread local storage for the case when a DLL is loaded
-* dynamically after process initialization.
-* The link time variables are passed to allow placing this function into
-* an RTL DLL itself.
-* The problem is described in Bugzilla 3342 and
-* http://www.nynaeve.net/?p=187, to quote from the latter:
-*
-* "When a DLL using implicit TLS is loaded, because the loader doesn't process the TLS
-*  directory, the _tls_index value is not initialized by the loader, nor is there space
-*  allocated for module's TLS data in the ThreadLocalStoragePointer arrays of running
-*  threads. The DLL continues to load, however, and things will appear to work... until the
-*  first access to a __declspec(thread) variable occurs, that is."
-*
-* _tls_index is initialized by the compiler to 0, so we can use this as a test.
+/**
+Fix implicit thread local storage for the case when a DLL is loaded
+dynamically after process initialization.
+The link time variables are passed to allow placing this function into
+an RTL DLL itself.
+The problem is described in Bugzilla 3342 and
+http://www.nynaeve.net/?p=187, to quote from the latter:
+
+"When a DLL using implicit TLS is loaded, because the loader doesn't process the TLS
+ directory, the _tls_index value is not initialized by the loader, nor is there space
+ allocated for module's TLS data in the ThreadLocalStoragePointer arrays of running
+ threads. The DLL continues to load, however, and things will appear to work... until the
+ first access to a __declspec(thread) variable occurs, that is."
+
+_tls_index is initialized by the compiler to 0, so we can use this as a test.
 */
 bool setDllTls(HINSTANCE hInstance, void* tlsstart, void* tlsend, void* tls_callbacks_a, int* tlsindex) nothrow
 {
