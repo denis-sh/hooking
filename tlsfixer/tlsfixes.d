@@ -169,8 +169,13 @@ body
 {
 	debug(tlsfixes)
 	{
-		char[MAX_PATH + 1] s;
-		enforceErr(GetModuleFileNameA(hinstDLL, s.ptr, s.length));
+		char[MAX_PATH + 1] buff;
+		char[] moduleName = buff[0 .. GetModuleFileNameA(hinstDLL, buff.ptr, buff.length)];
+		enforceErr(moduleName.length);
+		foreach_reverse(i, ch; moduleName) if(ch == '\\')
+		{ moduleName = moduleName[i + 1 .. $]; break; }
+		if(moduleName.length > 3 && moduleName[$ - 4] == '.')
+			moduleName[$ - 4] = '\0';
 		const debug_itd = getImageTlsDirectory(hinstDLL);
 		if(debug_itd)
 		{
@@ -185,7 +190,7 @@ body
 				case 2: printf("DLL_THREAD_ATTACH"); break;
 				case 3: printf("DLL_THREAD_DETACH"); break;
 			}
-			printf(": %X, %s\n", hinstDLL, s.ptr);
+			printf(": %X, %s\n", hinstDLL, moduleName.ptr);
 		}
 	}
 
