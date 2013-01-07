@@ -150,8 +150,7 @@ bool setDllTls(HINSTANCE hInstance, void* tlsstart, void* tlsend, void* tls_call
 	free(threadIds.ptr);
 
 	ldrMod.TlsIndex = -1;  // flag TLS usage (not the index itself)
-	//ldrMod.LoadCount = -1; // prevent unloading of the DLL,
-	// since XP does not keep track of used TLS entries
+	// Note: we can set `ldrMod.LoadCount = -1` to prevent unloading of the DLL
 	return true;
 }
 
