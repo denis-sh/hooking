@@ -96,7 +96,6 @@ L:
 
 	// Fill TLS bitmap
 	tlsArrayLength = numberOfTlsEntries;
-	*Ntdll.pLdrpNumberOfTlsEntries = tlsArrayLength;//1024^^2 * 10
 	useTlsIndex(maxTlsIndex);
 	foreach(ldrMod; loadedModules)
 	{
