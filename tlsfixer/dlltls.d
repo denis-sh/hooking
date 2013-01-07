@@ -334,7 +334,6 @@ void removeTlsListEntry(LdrpTlsListEntry* entry) nothrow
 	--numberOfTlsEntries;
 
 	// Free TlsList entry memory
-	// FIXME: what is is was allocated by an other person and not freed?
 	freeProcessHeap(entry);
 }
 
