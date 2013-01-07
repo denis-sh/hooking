@@ -150,9 +150,53 @@ extern (Windows)
 
 	BOOL dllMainCaller(DllMainType dllMain, HINSTANCE hInstance, ULONG ulReason, LPVOID pvReserved)
 	{
-		beforeDllMainCalled(hInstance, ulReason, pvReserved);
+		debug(tlsfixes)
+		{
+			char[MAX_PATH + 1] buff;
+			char[] moduleName = buff[0 .. GetModuleFileNameA(hInstance, buff.ptr, buff.length)];
+			enforceErr(moduleName.length);
+			foreach_reverse(i, ch; moduleName) if(ch == '\\')
+			{ moduleName = moduleName[i + 1 .. $]; break; }
+			if(moduleName.length > 3 && moduleName[$ - 4] == '.')
+				moduleName[$ - 4] = '\0';
+			const debug_itd = getImageTlsDirectory(hInstance);
+			if(debug_itd)
+			{
+				final switch(ulReason)
+				{
+					case 1: printf("DLL_PROCESS_ATTACH (loaded %s)",
+								pvReserved is null ? "dynamically".ptr : "statically".ptr);
+						break;
+					case 0: printf("DLL_PROCESS_DETACH (%s)",
+								pvReserved is null ? "FreeLibrary or failed DLL load".ptr : "process is terminating".ptr);
+						break;
+					case 2: printf("DLL_THREAD_ATTACH"); break;
+					case 3: printf("DLL_THREAD_DETACH"); break;
+				}
+				printf(": %X, %s\n", hInstance, moduleName.ptr);
+			}
+		}
+
+		assert(ulReason < 4, "Unexpected reason");
+
+		// Set TLS directory for DLL_PROCESS_ATTACH (1) and DLL_PROCESS_DETACH (0)
+		const imageTlsDirectory = (ulReason & ~1) == 0 ? getImageTlsDirectory(hInstance) : null;
+
+		if(ulReason == 1 && imageTlsDirectory) // DLL_PROCESS_ATTACH and there is implicit TLS
+			enforceErr(setDllTls(hInstance,
+					cast(void*) imageTlsDirectory.StartAddressOfRawData,
+					cast(void*) imageTlsDirectory.EndAddressOfRawData,
+					cast(void*) imageTlsDirectory.AddressOfCallBacks,
+					cast( int*) imageTlsDirectory.AddressOfIndex),
+				"Can't set DLL TLS");
+
 		immutable BOOL res = dllMain(hInstance, ulReason, pvReserved);
-		afterDllMainCalled(hInstance, ulReason, pvReserved);
+
+		if(ulReason == 0 && imageTlsDirectory) // DLL_PROCESS_DETACH and there is implicit TLS
+			enforceErr(freeDllTls(hInstance,
+					cast(int*) imageTlsDirectory.AddressOfIndex),
+				"Can't free DLL TLS");
+
 		return res;
 	}
 
@@ -160,67 +204,6 @@ extern (Windows)
 	{
 		onLdrShutdownThread();
 	}
-}
-
-// (with DisableThreadLibraryCalls)
-void beforeDllMainCalled(HINSTANCE hinstDLL, DWORD reason, LPVOID reserved) nothrow
-in { assert(reason < 4, "Unexpected reason"); }
-body
-{
-	debug(tlsfixes)
-	{
-		char[MAX_PATH + 1] buff;
-		char[] moduleName = buff[0 .. GetModuleFileNameA(hinstDLL, buff.ptr, buff.length)];
-		enforceErr(moduleName.length);
-		foreach_reverse(i, ch; moduleName) if(ch == '\\')
-		{ moduleName = moduleName[i + 1 .. $]; break; }
-		if(moduleName.length > 3 && moduleName[$ - 4] == '.')
-			moduleName[$ - 4] = '\0';
-		const debug_itd = getImageTlsDirectory(hinstDLL);
-		if(debug_itd)
-		{
-			final switch(reason)
-			{
-				case 1: printf("DLL_PROCESS_ATTACH (loaded %s)",
-							reserved is null ? "dynamically".ptr : "statically".ptr);
-					break;
-				case 0: printf("DLL_PROCESS_DETACH (%s)",
-							reserved is null ? "FreeLibrary or failed DLL load".ptr : "process is terminating".ptr);
-					break;
-				case 2: printf("DLL_THREAD_ATTACH"); break;
-				case 3: printf("DLL_THREAD_DETACH"); break;
-			}
-			printf(": %X, %s\n", hinstDLL, moduleName.ptr);
-		}
-	}
-
-	if(reason != 1)
-		return; // Not DLL_PROCESS_ATTACH
-	
-	const itd = getImageTlsDirectory(hinstDLL);
-	if(!itd)
-		return; // No implicit TLS
-	debug(tlsfixes) puts("Setting TLS...");
-
-	enforceErr(setDllTls(hinstDLL,
-		cast(void*) itd.StartAddressOfRawData,
-		cast(void*) itd.EndAddressOfRawData,
-		cast(void*) itd.AddressOfCallBacks,
-		cast( int*) itd.AddressOfIndex),
-		"Can't set DLL TLS");
-}
-
-void afterDllMainCalled(HINSTANCE hinstDLL, DWORD reason, LPVOID reserved) nothrow
-{
-	if(reason != 0)
-		return; // Not DLL_PROCESS_DETACH
-
-	const itd = getImageTlsDirectory(hinstDLL);
-	if(!itd)
-		return; // No implicit TLS
-	debug(tlsfixes) puts("Freeing TLS...");
-
-	enforceErr(freeDllTls(hinstDLL, cast(int*) itd.AddressOfIndex), "Can't free DLL TLS");
 }
 
 void insertJump(void* originAddress, in char[] originCode, const(void)* target)
