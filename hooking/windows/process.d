@@ -715,7 +715,7 @@ size_t allocateRemoteCodeAndData(ref Process process, string dllName, size_t jmp
 	void write(T)(in T[] tarr...)
 	{
 		auto barr = cast(const(ubyte)[]) tarr;
-		ptr[0 .. barr.length] = barr;
+		ptr[0 .. barr.length] = barr[];
 		ptr += barr.length;
 	}
 

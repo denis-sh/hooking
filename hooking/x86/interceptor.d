@@ -160,7 +160,7 @@ body
 void writeAsm(T)(ref ubyte* ptr, in T[] tarr...) nothrow
 {
 	auto barr = cast(const(ubyte)[]) tarr;
-	ptr[0 .. barr.length] = barr;
+	ptr[0 .. barr.length] = barr[];
 	ptr += barr.length;
 }
 
