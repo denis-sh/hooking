@@ -23,33 +23,25 @@ enum ExitCodes { success, processNonZeroReturn, dllLoadingFailure, processLaunch
 
 int main(string[] args)
 {
-	immutable(char)[0] invalid;
-	string file = invalid, fileArgs, dll = invalid;
 	bool wait = false;
 	try
 	{
 		getopt(args,
-			"file|f", &file,
-			"args|a", &fileArgs,
-			"dll|d", &dll,
 			"wait|w", &wait);
 
-		enforce(file !is invalid, "Invalid arguments: `file` not specified");
-		enforce(dll !is invalid , "Invalid arguments: `dll` not specified");
-		enforce(!file.empty     , "Invalid arguments: `file` is empty");
-		enforce(!dll.empty      , "Invalid arguments: `dll` is empty");
-		enforce(args.length == 1, format("Superfluous arguments: %s", args));
+		enforce(args.length > 1, "Not enough arguments: no DLL or executable file specified");
+		enforce(args.length > 2, "Not enough arguments: no executable file specified");
 	}
 	catch(Exception e)
 	{
-		stderr.writefln("Incorrect usage: %s", e.msg);
+		stderr.writefln("%s\nUsage: dllinj [-w|--wait] [--] <dll file> <exe file> [<args>]", e.msg);
 		return ExitCodes.incorrectUsage;
 	}
 
+	auto dll = args[1], file = args[2], fileArgs = args[2 .. $]; 
 
 	Process process = void;
-	auto processStartInfo = ProcessStartInfo("x " ~ fileArgs, false, true);
-	processStartInfo.file = file;
+	const processStartInfo = ProcessStartInfo(file, fileArgs, false, true);
 	Thread primaryThread = Thread.init;
 	if(auto e = collectException(emplace(&process, processStartInfo, primaryThread)))
 	{

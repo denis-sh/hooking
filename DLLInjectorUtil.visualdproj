@@ -87,7 +87,7 @@
   <libpaths>..\phobos-additions\Debug</libpaths>
   <deffile />
   <resfile />
-  <exefile>$(OutDir)\$(ProjectName).exe</exefile>
+  <exefile>$(OutDir)\dllinj.exe</exefile>
   <useStdLibPath>1</useStdLibPath>
   <additionalOptions />
   <preBuildCommand />
@@ -181,7 +181,7 @@
   <libpaths>..\phobos-additions\Release</libpaths>
   <deffile />
   <resfile />
-  <exefile>$(OutDir)\$(ProjectName).exe</exefile>
+  <exefile>$(OutDir)\dllinj.exe</exefile>
   <useStdLibPath>1</useStdLibPath>
   <additionalOptions />
   <preBuildCommand />
