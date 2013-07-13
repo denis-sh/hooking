@@ -23,6 +23,7 @@
   <isSolaris>0</isSolaris>
   <scheduler>0</scheduler>
   <useDeprecated>0</useDeprecated>
+  <errDeprecated>1</errDeprecated>
   <useAssert>0</useAssert>
   <useInvariants>0</useInvariants>
   <useIn>0</useIn>
@@ -46,7 +47,7 @@
   <compiler>0</compiler>
   <otherDMD>1</otherDMD>
   <program>$(DMDInstallDir)..\dmd2head\windows\bin\dmd.exe</program>
-  <imppath />
+  <imppath>..\phobos-additions</imppath>
   <fileImppath />
   <outdir>$(ConfigurationName)</outdir>
   <objdir>$(OutDir)</objdir>
@@ -87,6 +88,7 @@
   <deffile />
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).lib</exefile>
+  <useStdLibPath>1</useStdLibPath>
   <additionalOptions />
   <preBuildCommand />
   <postBuildCommand />
@@ -115,6 +117,7 @@
   <isSolaris>0</isSolaris>
   <scheduler>0</scheduler>
   <useDeprecated>0</useDeprecated>
+  <errDeprecated>1</errDeprecated>
   <useAssert>0</useAssert>
   <useInvariants>0</useInvariants>
   <useIn>0</useIn>
@@ -138,7 +141,7 @@
   <compiler>0</compiler>
   <otherDMD>1</otherDMD>
   <program>$(DMDInstallDir)..\dmd2head\windows\bin\dmd.exe</program>
-  <imppath />
+  <imppath>..\phobos-additions</imppath>
   <fileImppath />
   <outdir>$(ConfigurationName)</outdir>
   <objdir>$(OutDir)</objdir>
@@ -179,6 +182,7 @@
   <deffile />
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).lib</exefile>
+  <useStdLibPath>1</useStdLibPath>
   <additionalOptions />
   <preBuildCommand />
   <postBuildCommand />
@@ -207,6 +211,7 @@
   <isSolaris>0</isSolaris>
   <scheduler>0</scheduler>
   <useDeprecated>0</useDeprecated>
+  <errDeprecated>1</errDeprecated>
   <useAssert>0</useAssert>
   <useInvariants>0</useInvariants>
   <useIn>0</useIn>
@@ -230,7 +235,7 @@
   <compiler>0</compiler>
   <otherDMD>1</otherDMD>
   <program>$(DMDInstallDir)..\dmd2head\windows\bin\dmd.exe</program>
-  <imppath />
+  <imppath>..\phobos-additions</imppath>
   <fileImppath />
   <outdir>$(ConfigurationName)</outdir>
   <objdir>$(OutDir)</objdir>
@@ -267,10 +272,11 @@
   <objfiles />
   <linkswitches />
   <libfiles>PhobosAdditions.lib</libfiles>
-  <libpaths />
+  <libpaths>..\phobos-additions\Debug</libpaths>
   <deffile />
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).lib.unittest.exe</exefile>
+  <useStdLibPath>1</useStdLibPath>
   <additionalOptions>unittestmain.d</additionalOptions>
   <preBuildCommand />
   <postBuildCommand />
