@@ -106,7 +106,7 @@ struct Process
 		if(cast(ubyte) GetVersion() < 6 && (requiredAccess & PROCESS_QUERY_LIMITED_INFORMATION))
 			requiredAccess = requiredAccess & ~PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_QUERY_INFORMATION;
 		enforce((_handleAccess & requiredAccess) == requiredAccess,
-			xformat("Insufficient process handle access to call '%s'", func));
+			format("Insufficient process handle access to call '%s'", func));
 	}
 
 
@@ -236,7 +236,7 @@ struct Process
 	{
 		import std.process;
 		immutable windir = environment["windir"], pathNoExt = windir ~ `\system32\cmd`;
-		assert(!windir.canFind(' '), xformat("Can't test with %%windir%%='%s'", windir));
+		assert(!windir.canFind(' '), format("Can't test with %%windir%%='%s'", windir));
 
 		assertThrown!Exception(Process(ProcessStartInfo("cmd"    , false, true)));
 		assertThrown!Exception(Process(ProcessStartInfo("cmd.exe", false, true)));
@@ -696,7 +696,7 @@ enum : DWORD
 
 private string requireAccess(string requiredAccess, string func)
 {
-	return xformat(q{
+	return format(q{
 		if(_handle) checkAccess(%s, q{%s});
 		else return Process(_processId, %1$s, true).%2$s;
 	}, requiredAccess, func);

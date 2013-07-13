@@ -10,7 +10,7 @@ module utils.dllinjector_main;
 
 import std.getopt;
 import std.exception;
-import std.string: xformat;
+import std.string: format;
 import std.range: empty;
 import std.stdio: stderr;
 import std.conv: emplace;
@@ -38,7 +38,7 @@ int main(string[] args)
 		enforce(dll !is invalid , "Invalid arguments: `dll` not specified");
 		enforce(!file.empty     , "Invalid arguments: `file` is empty");
 		enforce(!dll.empty      , "Invalid arguments: `dll` is empty");
-		enforce(args.length == 1, xformat("Superfluous arguments: %s", args));
+		enforce(args.length == 1, format("Superfluous arguments: %s", args));
 	}
 	catch(Exception e)
 	{

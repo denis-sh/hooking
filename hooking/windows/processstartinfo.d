@@ -89,7 +89,7 @@ struct ProcessStartInfo
 				return _commandLine;
 
 			import std.process;
-			return xformat(`"%s"%-( %s%)`, _file, _args.map!(arg => escapeWindowsArgument(arg))());
+			return format(`"%s"%-( %s%)`, _file, _args.map!(arg => escapeWindowsArgument(arg))());
 		}
 
 
@@ -213,7 +213,7 @@ struct ProcessStartInfo
 				assert(p.file == toFile);
 				assert(p.commandLine == toCmd);
 				p.arguments = fromArgs;
-				assert(p.commandLine == toCmdWithArgs, xformat("\n%s != \n%s", p.commandLine, toCmdWithArgs));
+				assert(p.commandLine == toCmdWithArgs, format("\n%s != \n%s", p.commandLine, toCmdWithArgs));
 			}
 			test(`a`    , `a`    , `"a"`    , [], `"a"`);
 			test(`a`    , `a`    , `"a"`    , [`b`], `"a" "b"`);

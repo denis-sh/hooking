@@ -21,7 +21,7 @@ enum pushedBytes = 36;
 
 void nakedHelper(alias callTarget, size_t jmpTarget, string originCode)()
 {
-	mixin(xformat(`
+	mixin(format(`
 	asm
 	{
 		naked;
@@ -43,7 +43,7 @@ void insertCall(alias f, size_t address, string originCode)()
 
 	ubyte* ptr = cast(ubyte*) address;
 	enforce(ptr[0 .. n] == originCode,
-		xformat("Unexpected bytes at 0x%X: %(%X %) instead of %(%X %)", ptr, ptr[0 .. n], cast(ubyte[]) originCode));
+		format("Unexpected bytes at 0x%X: %(%X %) instead of %(%X %)", ptr, ptr[0 .. n], cast(ubyte[]) originCode));
 
 	insertJump(ptr, n, cast(const(void*)) &helper);
 
@@ -77,7 +77,7 @@ body
 	ubyte* optr = cast(ubyte*) originAddress;
 	immutable n = originCode.length;
 	enforce(optr[0 .. n] == originCode,
-		xformat("%(%X %) instead of %(%X %)", optr[0 .. n], cast(ubyte[]) originCode));
+		format("%(%X %) instead of %(%X %)", optr[0 .. n], cast(ubyte[]) originCode));
 
 	ubyte* mptr = cast(ubyte*) enforce
 		(VirtualAllocEx(GetCurrentProcess(), null, 1024, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));

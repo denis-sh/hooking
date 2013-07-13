@@ -31,7 +31,7 @@ struct Thread
 		if(cast(ubyte) GetVersion() < 6 && (requiredAccess & THREAD_QUERY_LIMITED_INFORMATION))
 			requiredAccess = requiredAccess & ~THREAD_QUERY_LIMITED_INFORMATION | THREAD_QUERY_INFORMATION;
 		enforce((_handleAccess & requiredAccess) == requiredAccess,
-			xformat("Insufficient thread handle access to call '%s'", func));
+			format("Insufficient thread handle access to call '%s'", func));
 	}
 
 
@@ -326,7 +326,7 @@ enum : DWORD
 
 private string requireAccess(string requiredAccess, string func)
 {
-	return xformat(q{
+	return format(q{
 		if(_handle) checkAccess(%s, q{%s});
 		else return Thread(_threadId, %1$s, true).%2$s;
 	}, requiredAccess, func);
